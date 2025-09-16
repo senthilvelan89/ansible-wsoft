@@ -1,0 +1,250 @@
+- name: Perform Deployment Linux
+  hosts: web_servers-linux
+  serial: 1
+  vars_files:
+    - configs.yml
+  tasks:
+    - name: "clean /tmp/deploy/ client folders before deployment"
+      ansible.builtin.shell: "rm -rf /tmp/deploy/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}"
+      delegate_to: localhost
+      
+    - name: "clean /tmp/war_extract/ client folders before deployment"
+      ansible.builtin.shell: "rm -rf /tmp/war_extract/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}"
+      delegate_to: localhost
+      
+    - name: "Create required directories for client deployment if it does not exist"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "/tmp/deploy/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}"
+        - "/tmp/war_extract/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}"
+        - "/tmp/deploy/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/{{ hostvars[inventory_hostname].S3_Release_Folder | split ('/') |last | regex_replace('_jre[0-9].rar', '')  }}_Online"
+        - "/tmp/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}"
+        
+      delegate_to: localhost
+    - name: "Create DB Properties file from DB entry for client"
+      template:
+        src: db_props_template.j2
+        dest: "/tmp/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/db.properties"
+      delegate_to: localhost
+      
+    - name: "Get S3 Deployment artifact for client"
+      amazon.aws.s3_object:
+        bucket: cicd-wspipeline
+        object: "{{ hostvars[inventory_hostname].S3_Release_Folder | replace ('https://cicd-wspipeline.s3.ap-south-1.amazonaws.com/','') |replace ('\"','') }}"
+        dest: "/tmp/deploy/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/deployment.rar"
+        mode: get
+        access_key: "{{ access_key }}"
+        secret_key: "14NnVxgurQTSJ74G3s8jtJCWAKCVyTz4/fgdsWmB"
+        region: "ap-south-1"
+      delegate_to: localhost
+      
+    - name: Unarchieve the rar file from S3
+      ansible.builtin.command: unrar x deployment.rar
+      args:
+        chdir: "/tmp/deploy/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}"
+      delegate_to: localhost
+    - name: Unarchieve the rar file under release folder
+      ansible.builtin.unarchive:
+        src: "{{ hostvars[inventory_hostname].S3_Release_Folder | split ('/') |last | regex_replace('_jre[0-9].rar', '')  }}_Online.rar"
+        dest: "/tmp/deploy/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/{{ hostvars[inventory_hostname].S3_Release_Folder | split ('/') |last | regex_replace('_jre[0-9].rar', '')  }}_Online"
+      delegate_to: localhost
+
+    - name: "Change the working directory to /tmp/war_extract/ client and run the command to inflate war file"
+      ansible.builtin.command: jar -xvf /tmp/deploy/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/{{ hostvars[inventory_hostname].S3_Release_Folder | split ('/') |last | regex_replace('_jre[0-9].rar', '')  }}_Online/mshopaid.war
+      args:
+        chdir: "/tmp/war_extract/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}"
+      delegate_to: localhost
+    - name: Remove file (delete file)
+      ansible.builtin.file:
+        path: "/tmp/war_extract/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/WEB-INF/db.properties"
+        state: absent
+      delegate_to: localhost
+    - name: "Copy DB properties from /tmp/ client to /tmp/war_extract/ client contents"
+      ansible.builtin.copy:
+        src: "/tmp/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/db.properties"
+        dest: "/tmp/war_extract/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/WEB-INF/db_{{ hostvars[inventory_hostname].Client_Name }}.properties"
+      delegate_to: localhost
+    - name: "Change the working directory to client and package the war file"
+      ansible.builtin.command: "jar -cvf {{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}.war ."
+      args:
+        chdir: "/tmp/war_extract/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}"
+      delegate_to: localhost
+    - name: Copy war file to deployment folder
+      ansible.windows.win_copy:
+        src: "/tmp/war_extract/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/{{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}.war"
+        dest: "{{ hostvars[inventory_hostname].TMC_MPOS_War_Deployment_Folder}}\\{{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}.war"
+        backup: yes
+      become: true
+      register: copy_war_result
+    - name: Display the captured output
+      ansible.builtin.debug:
+        msg: "Copy operation result - Changed: {{ copy_war_result.changed }}, Destination: {{ copy_war_result.dest }}"
+    - name: Display backup information
+      ansible.builtin.debug:
+        msg: "Backup created: {{ copy_war_result.backup_file | default('No backup created') }}"
+    - name: Restart Tomcat
+      ansible.windows.win_service:
+        name: "{{ hostvars[inventory_hostname].Tomcat_Service_Name | default('Tomcat9') }}"
+        state: restarted
+      become: true
+      when: hostvars[inventory_hostname].Restart_Required == "1"
+    - name: check service endpoint after restart
+      ansible.builtin.uri:
+        url: "{{ hostvars[inventory_hostname].TMC_MPOS_URL }}"
+        follow_redirects: none
+        method: GET
+        timeout: 90
+        status_code: [200]
+      retries: 5
+      delay: 120
+      delegate_to: localhost
+      register: tvt_result
+
+    - name: Successful TVT
+      block:
+      - name: Execute MySQL Query
+        vars:
+          ansible_python_interpreter: /usr/bin/python3
+        community.mysql.mysql_query:
+          login_user: ansibleuser
+          login_password: ansibleuser@123
+          login_host: 202.88.218.244
+          login_db: ws_license_details
+          query: UPDATE version_update_details SET Status = 'C', SET Remarks = "DEPLOYMENT COMPLETED SUCCESSFULLY"  WHERE ID = %(taskid)s
+          named_args:
+            taskid: "{{ hostvars[inventory_hostname].Task_Id }}"
+        delegate_to: localhost
+        
+
+      - name: Send completion email
+        ansible.builtin.mail:
+          host: "smtp.mandrillapp.com"
+          port: "587"
+          username: "systemsupport@wondersoft.in"
+          password: "md-3A1gagREFP4KF2Pk14zM2w"
+          secure: "{{ smtp_secure | default(omit) }}"  # e.g. 'starttls' or 'ssl'
+          to: "senthilvelan89@gmail.com"
+          from: "crmreports@wondersoft.com"
+          subject: "Deployment Completed Successfully - {{ hostvars[inventory_hostname].Client_Name }}"
+          body: |
+            ===============================================
+            DEPLOYMENT COMPLETED SUCCESSFULLY
+            ===============================================
+            
+            Client Information:
+            - Client Name: {{ hostvars[inventory_hostname].Client_Name }}
+            - Task ID: {{ hostvars[inventory_hostname].Task_Id }}
+            - Target Server: {{ inventory_hostname }}
+            
+            Deployment Details:
+            - WAR File: {{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}.war
+            - Deployment Folder: {{ hostvars[inventory_hostname].TMC_MPOS_War_Deployment_Folder }}
+            - S3 Release: {{ hostvars[inventory_hostname].S3_Release_Folder }}
+            
+            Service Status:
+            - Tomcat Restart: {{ 'Yes' if hostvars[inventory_hostname].Restart_Required == "1" else 'No' }}
+            - Service Endpoint: {{ hostvars[inventory_hostname].TMC_MPOS_URL }}
+            - Endpoint Status: ✅ HEALTHY (HTTP 200)
+            
+            Backup Information:
+            {% if copy_war_result.backup_file is defined %}
+            - Backup Created: {{ copy_war_result.backup_file }}
+            {% else %}
+            - Backup Created: No backup file information available
+            {% endif %}
+            
+            Execution Details:
+            - Completion Time: {{ ansible_date_time.iso8601 }}
+            - Playbook: {{ play_name | default('Linux MPOS Deployment') }}
+            - Ansible Version: {{ ansible_version.full }}
+            
+            ===============================================
+            Deployment completed successfully!
+            ===============================================
+        delegate_to: localhost
+      when: tvt_result.failed == false
+     
+    - name: Rollback steps
+      block: 
+      - name: Check if backup file exists
+        ansible.windows.win_stat:
+          path: "{{ copy_war_result.backup_file }}"
+        register: backup_file_check
+        when: copy_war_result.backup_file is defined
+        
+      - name: Restore from backup file
+        ansible.windows.win_copy:
+          src: "{{ copy_war_result.backup_file }}"
+          dest: "{{ hostvars[inventory_hostname].TMC_MPOS_War_Deployment_Folder}}\\{{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}.war"
+          remote_src: yes
+        become: true
+        when: 
+          - copy_war_result.backup_file is defined
+          - backup_file_check.stat.exists
+        register: rollback_restore_result
+      - name: Restart Tomcat
+        ansible.windows.win_service:
+          name: "{{ hostvars[inventory_hostname].Tomcat_Service_Name | default('Tomcat9') }}"
+          state: restarted
+        become: true
+        when: hostvars[inventory_hostname].Restart_Required == "1"    
+      - name: Execute MySQL Query
+        vars:
+          ansible_python_interpreter: /usr/bin/python3
+        community.mysql.mysql_query:
+          login_user: ansibleuser
+          login_password: ansibleuser@123
+          login_host: 202.88.218.244
+          login_db: ws_license_details
+          query: UPDATE version_update_details SET Status = 'E', SET Remarks = "ROLLBACK COMPLETED"  WHERE ID = %(taskid)s
+          named_args:
+            taskid: "{{ hostvars[inventory_hostname].Task_Id }}"
+        delegate_to: localhost
+      - name: Send rollback completion email
+        ansible.builtin.mail:
+          host: "smtp.mandrillapp.com"
+          port: "587"
+          username: "systemsupport@wondersoft.in"
+          password: "md-3A1gagREFP4KF2Pk14zM2w"
+          secure: "{{ smtp_secure | default(omit) }}"  # e.g. 'starttls' or 'ssl'
+          to: "senthilvelan89@gmail.com"
+          from: "crmreports@wondersoft.com"
+          subject: "ROLLBACK COMPLETED - {{ hostvars[inventory_hostname].Client_Name }}"
+          body: |
+            ===============================================
+            ROLLBACK COMPLETED
+            ===============================================
+            
+            Client Information:
+            - Client Name: {{ hostvars[inventory_hostname].Client_Name }}
+            - Task ID: {{ hostvars[inventory_hostname].Task_Id }}
+            - Target Server: {{ inventory_hostname }}
+            
+            Rollback Details:
+            - WAR File: {{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}.war
+            - Deployment Folder: {{ hostvars[inventory_hostname].TMC_MPOS_War_Deployment_Folder }}
+            
+            Restore Method:
+            {% if rollback_restore_result is defined and rollback_restore_result.changed %}
+            - ✅ Restored from backup file: {{ copy_war_result.backup_file }}
+            {% else %}
+            - ❌ Rollback failed or no changes made
+            {% endif %}
+            
+            Service Status:
+            - Tomcat Restart: {{ 'Yes' if hostvars[inventory_hostname].Restart_Required == "1" else 'No' }}
+            - Service Endpoint: {{ hostvars[inventory_hostname].TMC_MPOS_URL }}
+            
+            Execution Details:
+            - Rollback Time: {{ ansible_date_time.iso8601 }}
+            - Playbook: {{ play_name | default('Linux MPOS Deployment') }}
+            - Reason: URL Check Failed - Service endpoint not responding
+            
+            ===============================================
+            Rollback completed - Service restored to previous state
+            ===============================================
+        delegate_to: localhost
+      when: tvt_result.failed == true

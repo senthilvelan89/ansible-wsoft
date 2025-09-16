@@ -1,0 +1,170 @@
+- name: Perform Deployment Linux
+  hosts: web_servers-linux
+  serial: 1
+  vars_files:
+    - configs.yml
+  tasks:
+    - name: "clean /tmp/deploy/ client folders before deployment"
+      ansible.builtin.shell: "rm -rf /tmp/deploy/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}"
+      delegate_to: localhost
+      
+    - name: "clean /tmp/war_extract/ client folders before deployment"
+      ansible.builtin.shell: "rm -rf /tmp/war_extract/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}"
+      delegate_to: localhost
+      
+    - name: "Create required directories for client deployment if it does not exist"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "/tmp/deploy/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}"
+        - "/tmp/war_extract/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}"
+        - "/tmp/deploy/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/{{ hostvars[inventory_hostname].S3_Release_Folder | split ('/') |last | regex_replace('_jre[0-9].rar', '')  }}_Online"
+        - "/tmp/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}"
+        
+      delegate_to: localhost
+    - name: "Create DB Properties file from DB entry for client"
+      template:
+        src: db_props_template.j2
+        dest: "/tmp/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/db.properties"
+      delegate_to: localhost
+      
+    - name: "Get S3 Deployment artifact for client"
+      amazon.aws.s3_object:
+        bucket: cicd-wspipeline
+        object: "{{ hostvars[inventory_hostname].S3_Release_Folder | replace ('https://cicd-wspipeline.s3.ap-south-1.amazonaws.com/','') |replace ('\"','') }}"
+        dest: "/tmp/deploy/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/deployment.rar"
+        mode: get
+        access_key: "{{ access_key }}"
+        secret_key: "14NnVxgurQTSJ74G3s8jtJCWAKCVyTz4/fgdsWmB"
+        region: "ap-south-1"
+      delegate_to: localhost
+      
+    - name: Unarchieve the rar file from S3
+      ansible.builtin.command: unrar x deployment.rar
+      args:
+        chdir: "/tmp/deploy/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}"
+      delegate_to: localhost
+    - name: Unarchieve the rar file under release folder
+      ansible.builtin.unarchive:
+        src: "{{ hostvars[inventory_hostname].S3_Release_Folder | split ('/') |last | regex_replace('_jre[0-9].rar', '')  }}_Online.rar"
+        dest: "/tmp/deploy/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/{{ hostvars[inventory_hostname].S3_Release_Folder | split ('/') |last | regex_replace('_jre[0-9].rar', '')  }}_Online"
+      delegate_to: localhost
+
+    - name: "Change the working directory to /tmp/war_extract/ client and run the command to inflate war file"
+      ansible.builtin.command: jar -xvf /tmp/deploy/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/{{ hostvars[inventory_hostname].S3_Release_Folder | split ('/') |last | regex_replace('_jre[0-9].rar', '')  }}_Online/mshopaid.war
+      args:
+        chdir: "/tmp/war_extract/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}"
+      delegate_to: localhost
+    - name: Remove file (delete file)
+      ansible.builtin.file:
+        path: "/tmp/war_extract/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/WEB-INF/db.properties"
+        state: absent
+      delegate_to: localhost
+    - name: "Copy DB properties from /tmp/ client to /tmp/war_extract/ client contents"
+      ansible.builtin.copy:
+        src: "/tmp/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/db.properties"
+        dest: "/tmp/war_extract/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/WEB-INF/db_{{ hostvars[inventory_hostname].Client_Name }}.properties"
+      delegate_to: localhost
+    - name: "Change the working directory to client and package the war file"
+      ansible.builtin.command: "jar -cvf {{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}.war ."
+      args:
+        chdir: "/tmp/war_extract/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}"
+      delegate_to: localhost
+    - name: Copy war file with right owner and permissions
+      ansible.builtin.copy:
+        src: "/tmp/war_extract/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/{{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}.war"
+        dest: "{{ hostvars[inventory_hostname].TMC_MPOS_War_Deployment_Folder}}/{{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}"
+        owner: tomcat
+        group: tomcat
+        mode: '0644'
+        backup: yes
+      become: true
+      register: copy_war_result
+    - name: Display the URL
+      ansible.builtin.debug:
+        msg: "url - {{ hostvars[inventory_hostname].TMC_MPOS_URL }}"
+    - name: Display backup information
+      ansible.builtin.debug:
+        msg: "Backup created: {{ copy_war_result.backup_file | default('No backup created') }}"
+    - name: Restart Tomcat
+      ansible.builtin.service:
+        name: tomcat   # Replace with your Tomcat service name
+        state: restarted
+      become: true
+
+      when: hostvars[inventory_hostname].Restart_Required == "1"
+    - name: check service endpoint after restart
+      ansible.builtin.uri:
+        url: "{{ hostvars[inventory_hostname].TMC_MPOS_URL }}"
+        follow_redirects: none
+        method: GET
+        timeout: 90
+        status_code: [200]
+      retries: 10
+      delay: 120
+      delegate_to: localhost
+      register: tvt_result
+
+    - name: Successful TVT
+      block:
+      - name: Execute MySQL Query
+        vars:
+          ansible_python_interpreter: /usr/bin/python3
+        community.mysql.mysql_query:
+          login_user: ansibleuser
+          login_password: ansibleuser@123
+          login_host: 202.88.218.244
+          login_db: ws_license_details
+          query: UPDATE version_update_details SET Status = 'C'  WHERE ID = %(taskid)s
+          named_args:
+            taskid: "{{ hostvars[inventory_hostname].Task_Id }}"
+        delegate_to: localhost
+        
+
+      - name: Send completion email
+        ansible.builtin.mail:
+          host: "smtp.mandrillapp.com"
+          port: "587"
+          username: "systemsupport@wondersoft.in"
+          password: "md-3A1gagREFP4KF2Pk14zM2w"
+          secure: "{{ smtp_secure | default(omit) }}"  # e.g. 'starttls' or 'ssl'
+          to: "senthilvelan89@gmail.com"
+          from: "crmreports@wondersoft.com"
+          subject: "Playbook completed: {{ play_name | default('play') }}"
+          body: |
+            Playbook finished.
+            Time: "{{ ansible_date_time.iso8601 }}"
+        delegate_to: localhost
+      when: tvt_result.failed == false
+     
+    - name: Rollback steps
+      block: 
+      - name: Copy war file with right owner and permissions
+        ansible.builtin.copy:
+          src: "/tmp/war_extract/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/{{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}"
+          dest: "{{ hostvars[inventory_hostname].TMC_MPOS_War_Deployment_Folder}}/{{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}.war"
+          owner: tomcat
+          group: tomcat
+          mode: '0644'
+        become: true
+      - name: Restart Tomcat
+        ansible.builtin.service:
+          name: tomcat   # Replace with your Tomcat service name
+          state: restarted
+        become: true
+        when: hostvars[inventory_hostname].Restart_Required == "1"    
+      - name: Execute MySQL Query
+        vars:
+          ansible_python_interpreter: /usr/bin/python3
+        community.mysql.mysql_query:
+          login_user: ansibleuser
+          login_password: ansibleuser@123
+          login_host: 202.88.218.244
+          login_db: ws_license_details
+          query: UPDATE version_update_details SET Status = 'E'  WHERE ID = %(taskid)s
+          named_args:
+            taskid: "{{ hostvars[inventory_hostname].Task_Id }}"
+        delegate_to: localhost
+      when: tvt_result.failed == true
