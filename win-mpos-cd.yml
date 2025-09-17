@@ -75,9 +75,8 @@
     - name: Copy war file to deployment folder
       ansible.windows.win_copy:
         src: "/tmp/war_extract/{{ hostvars[inventory_hostname].Client_Name | replace (' ','') }}/{{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}.war"
-        dest: "{{ hostvars[inventory_hostname].TMC_MPOS_War_Deployment_Folder}}\\{{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}.war"
+        dest: "{{ hostvars[inventory_hostname].TMC_MPOS_War_Deployment_Folder}}\\{{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}"
         backup: yes
-      become: true
       register: copy_war_result
     - name: Display the captured output
       ansible.builtin.debug:
@@ -89,7 +88,6 @@
       ansible.windows.win_service:
         name: "{{ hostvars[inventory_hostname].Tomcat_Service_Name | default('Tomcat9') }}"
         state: restarted
-      become: true
       when: hostvars[inventory_hostname].Restart_Required == "1"
     - name: check service endpoint after restart
       ansible.builtin.uri:
@@ -180,7 +178,6 @@
           src: "{{ copy_war_result.backup_file }}"
           dest: "{{ hostvars[inventory_hostname].TMC_MPOS_War_Deployment_Folder}}\\{{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}.war"
           remote_src: yes
-        become: true
         when: 
           - copy_war_result.backup_file is defined
           - backup_file_check.stat.exists
@@ -189,7 +186,6 @@
         ansible.windows.win_service:
           name: "{{ hostvars[inventory_hostname].Tomcat_Service_Name | default('Tomcat9') }}"
           state: restarted
-        become: true
         when: hostvars[inventory_hostname].Restart_Required == "1"    
       - name: Execute MySQL Query
         vars:
