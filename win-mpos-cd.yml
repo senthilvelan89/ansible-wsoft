@@ -124,7 +124,7 @@
           username: "systemsupport@wondersoft.in"
           password: "md-3A1gagREFP4KF2Pk14zM2w"
           secure: "{{ smtp_secure | default(omit) }}"  # e.g. 'starttls' or 'ssl'
-          to: "senthilvelan89@gmail.com"
+          to: "senthilvelan89@gmail.com,benita.s@wondersoft.com,heamnath.baskar@wondersoft.com"
           from: "crmreports@wondersoft.com"
           subject: "Deployment Completed Successfully - {{ hostvars[inventory_hostname].Client_Name }}"
           body: |
@@ -145,7 +145,7 @@
             Service Status:
             - Tomcat Restart: {{ 'Yes' if hostvars[inventory_hostname].Restart_Required == "1" else 'No' }}
             - Service Endpoint: {{ hostvars[inventory_hostname].TMC_MPOS_URL }}
-            - Endpoint Status: ✅ HEALTHY (HTTP 200)
+            - Endpoint Status: ? HEALTHY (HTTP 200)
             
             Backup Information:
             {% if copy_war_result.backup_file is defined %}
@@ -206,7 +206,7 @@
           username: "systemsupport@wondersoft.in"
           password: "md-3A1gagREFP4KF2Pk14zM2w"
           secure: "{{ smtp_secure | default(omit) }}"  # e.g. 'starttls' or 'ssl'
-          to: "senthilvelan89@gmail.com"
+          to: "senthilvelan89@gmail.com,benita.s@wondersoft.com,heamnath.baskar@wondersoft.com"
           from: "crmreports@wondersoft.com"
           subject: "ROLLBACK COMPLETED - {{ hostvars[inventory_hostname].Client_Name }}"
           body: |
@@ -225,9 +225,9 @@
             
             Restore Method:
             {% if rollback_restore_result is defined and rollback_restore_result.changed %}
-            - ✅ Restored from backup file: {{ copy_war_result.backup_file }}
+            - ? Restored from backup file: {{ copy_war_result.backup_file }}
             {% else %}
-            - ❌ Rollback failed or no changes made
+            - ? Rollback failed or no changes made
             {% endif %}
             
             Service Status:

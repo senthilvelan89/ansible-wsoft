@@ -1,0 +1,7 @@
+plugin: mysql-dynamic-inventory
+db_host: 202.88.218.244
+db_user: ansibleuser
+db_pass: ansibleuser@123
+db_name: ws_license_details
+db_query: |
+  SELECT Update_Type,S3_Release_Folder,Restart_Required,Client_Name,Srv_HostName,inventory_hostname,inventory_group,Srv_PublicIP1,Srv_PublicIP2,Srv_Type,ansible_user,ansible_ssh_pass,TMC_Tomcat_Service_Name,Task_Id,Srv_AccessPort,Srv_ConfigDetails,ansible_ssh_private_key_file,TMC_MPOS_WAR_Deployment_Type,TMC_MPOS_Client_War_Name,TMC_MPOS_URL,TMC_MPOS_War_Deployment_Folder,DB_Properties,Release_Update_Start,ansible_sudo_pass,ansible_connection,ansible_winrm_transport,ansible_port, ansible_winrm_server_cert_validation  FROM  view_mpos_update_info  WHERE Srv_Type IN ('Linux', 'Windows');
