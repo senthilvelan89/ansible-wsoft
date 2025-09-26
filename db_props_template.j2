@@ -1,0 +1,12 @@
+
+{% if hostvars[inventory_hostname].DB_Properties is defined %}
+{% set db_props_lines = hostvars[inventory_hostname].DB_Properties.split('\n') %}
+{% for line in db_props_lines %}
+{% if line.strip() and '=' in line %}
+{% set parts = line.split('=', 1) %}
+{% if parts|length == 2 %}
+{{ parts[0].strip() }} = {{ parts[1].strip() }}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
