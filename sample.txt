@@ -1,0 +1,45 @@
+{
+    "_meta": {
+        "hostvars": {
+            "jenkinstestpos2.eshopaid.com": {
+                "Client_Name": "jenkinstest2",
+                "DB_Properties": "username = a2NxZ25oem18W30=\n                                                                                                                                                                                                                                                                                                                        password = S2NxZyZoKzg6Kg==\n                                                                                                                                                                                                                                                                                                                        servername = localhost:3310\n                                                                                                                                                                                                                                                    ",
+                "Release_Update_Start": "2025-08-08T00:00:00",
+                "Restart_Required": "1",
+                "S3_Release_Folder": "https://cicd-wspipeline.s3.ap-south-1.amazonaws.com/RELEASE/Palladium/2025_Jun/Jre9/20250627_2015_16.0616_jre9/20250627_20159.rar",
+                "Srv_AccessPort": 22,
+                "Srv_ConfigDetails": null,
+                "Srv_HostName": "ip-172-16-13-73",
+                "Srv_PublicIP1": "13.127.153.206",
+                "Srv_PublicIP2": null,
+                "Srv_Type": "Linux",
+                "TMC_MPOS_Client_War_Name": "mshopaid_jenkinstest2.war",
+                "TMC_MPOS_URL": "https://jenkinstestpos.eshopaid.com/mshopaid_jenkinstest2/",
+                "TMC_MPOS_WAR_Deployment_Type": "Online UAT",
+                "TMC_MPOS_War_Deployment_Folder": "/opt/tomcat/webapps",
+                "TMC_Tomcat_Service_Name": null,
+                "Task_Id": 3,
+                "Update_Type": "MPOS",
+                "ansible_connection": null,
+                "ansible_port": null,
+                "ansible_ssh_pass": null,
+                "ansible_ssh_private_key_file": "/home/ansibleadmin/pem/WSPOSOnlineUAT.pem",
+                "ansible_sudo_pass": "",
+                "ansible_user": "ubuntu",
+                "ansible_winrm_server_cert_validation": null,
+                "ansible_winrm_transport": null
+            }
+        }
+    },
+    "all": {
+        "children": [
+            "ungrouped",
+            "web_servers-linux"
+        ]
+    },
+    "web_servers-linux": {
+        "hosts": [
+            "jenkinstestpos2.eshopaid.com"
+        ]
+    }
+}

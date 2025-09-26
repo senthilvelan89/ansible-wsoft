@@ -88,9 +88,38 @@
     - name: Display backup information
       ansible.builtin.debug:
         msg: "Backup created: {{ copy_war_result.backup_file | default('No backup created') }}"
+    
+    - name: Create backup directory on target host
+      ansible.builtin.file:
+        path: "/opt/tomcat/backup"
+        state: directory
+        mode: '0755'
+      become: true
+      when: copy_war_result.backup_file is defined
+    
+    - name: Move backup file to backup directory on target host
+      ansible.builtin.copy:
+        src: "{{ copy_war_result.backup_file }}"
+        dest: "/opt/tomcat/backup/{{ copy_war_result.backup_file | basename }}"
+        owner: tomcat
+        group: tomcat
+        mode: '0644'
+        remote_src: yes
+      become: true
+      when: copy_war_result.backup_file is defined
+      register: backup_move_result
+    
+    - name: Remove original backup file after successful move
+      ansible.builtin.file:
+        path: "{{ copy_war_result.backup_file }}"
+        state: absent
+      become: true
+      when: 
+        - copy_war_result.backup_file is defined
+        - backup_move_result.changed | default(false)
     - name: Restart Tomcat
       ansible.builtin.service:
-        name: tomcat   # Replace with your Tomcat service name
+        name: "{{ hostvars[inventory_hostname].TMC_Tomcat_Service_Name }}" 
         state: restarted
       become: true
       when: hostvars[inventory_hostname].Restart_Required == "1"
@@ -173,15 +202,15 @@
      
     - name: Rollback steps
       block: 
-      - name: Check if backup file exists
+      - name: Check if backup file exists in backup directory
         ansible.builtin.stat:
-          path: "{{ copy_war_result.backup_file }}"
+          path: "/opt/tomcat/backup/{{ copy_war_result.backup_file | basename }}"
         register: backup_file_check
         when: copy_war_result.backup_file is defined
         
-      - name: Restore from backup file
+      - name: Restore from backup file in backup directory
         ansible.builtin.copy:
-          src: "{{ copy_war_result.backup_file }}"
+          src: "/opt/tomcat/backup/{{ copy_war_result.backup_file | basename }}"
           dest: "{{ hostvars[inventory_hostname].TMC_MPOS_War_Deployment_Folder}}/{{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}"
           owner: tomcat
           group: tomcat
@@ -194,7 +223,7 @@
         register: rollback_restore_result
       - name: Restart Tomcat
         ansible.builtin.service:
-          name: tomcat   # Replace with your Tomcat service name
+          name: "{{ hostvars[inventory_hostname].TMC_Tomcat_Service_Name }}"
           state: restarted
         become: true
         when: hostvars[inventory_hostname].Restart_Required == "1"    

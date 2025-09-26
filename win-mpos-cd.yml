@@ -84,9 +84,31 @@
     - name: Display backup information
       ansible.builtin.debug:
         msg: "Backup created: {{ copy_war_result.backup_file | default('No backup created') }}"
+    
+    - name: Create backup directory on target host
+      ansible.windows.win_file:
+        path: "{{ hostvars[inventory_hostname].TMC_MPOS_War_Deployment_Folder }}\\backup"
+        state: directory
+      when: copy_war_result.backup_file is defined
+    
+    - name: Move backup file to backup directory on target host
+      ansible.windows.win_copy:
+        src: "{{ copy_war_result.backup_file }}"
+        dest: "{{ hostvars[inventory_hostname].TMC_MPOS_War_Deployment_Folder }}\\backup\\{{ copy_war_result.backup_file | basename }}"
+        remote_src: yes
+      when: copy_war_result.backup_file is defined
+      register: backup_move_result
+    
+    - name: Remove original backup file after successful move
+      ansible.windows.win_file:
+        path: "{{ copy_war_result.backup_file }}"
+        state: absent
+      when: 
+        - copy_war_result.backup_file is defined
+        - backup_move_result.changed | default(false)
     - name: Restart Tomcat
       ansible.windows.win_service:
-        name: "{{ hostvars[inventory_hostname].Tomcat_Service_Name | default('Tomcat9') }}"
+        name: "{{ hostvars[inventory_hostname].Tomcat_Service_Name }}"
         state: restarted
       when: hostvars[inventory_hostname].Restart_Required == "1"
     - name: check service endpoint after restart
@@ -167,16 +189,16 @@
      
     - name: Rollback steps
       block: 
-      - name: Check if backup file exists
+      - name: Check if backup file exists in backup directory
         ansible.windows.win_stat:
-          path: "{{ copy_war_result.backup_file }}"
+          path: "{{ hostvars[inventory_hostname].TMC_MPOS_War_Deployment_Folder }}\\backup\\{{ copy_war_result.backup_file | basename }}"
         register: backup_file_check
         when: copy_war_result.backup_file is defined
         
-      - name: Restore from backup file
+      - name: Restore from backup file in backup directory
         ansible.windows.win_copy:
-          src: "{{ copy_war_result.backup_file }}"
-          dest: "{{ hostvars[inventory_hostname].TMC_MPOS_War_Deployment_Folder}}\\{{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}.war"
+          src: "{{ hostvars[inventory_hostname].TMC_MPOS_War_Deployment_Folder }}\\backup\\{{ copy_war_result.backup_file | basename }}"
+          dest: "{{ hostvars[inventory_hostname].TMC_MPOS_War_Deployment_Folder}}\\{{ hostvars[inventory_hostname].TMC_MPOS_Client_War_Name }}"
           remote_src: yes
         when: 
           - copy_war_result.backup_file is defined
@@ -184,7 +206,7 @@
         register: rollback_restore_result
       - name: Restart Tomcat
         ansible.windows.win_service:
-          name: "{{ hostvars[inventory_hostname].Tomcat_Service_Name | default('Tomcat9') }}"
+          name: "{{ hostvars[inventory_hostname].Tomcat_Service_Name }}"
           state: restarted
         when: hostvars[inventory_hostname].Restart_Required == "1"    
       - name: Execute MySQL Query
