@@ -1,0 +1,83 @@
+# SQL Scripts and Paths Used in Integration CD
+# Generated from integration-cd configuration files
+# Source files scanned: Jenkinsfile, CASA-build.properties, Netsuite-build.properties,
+#                       README-customer-configuration.md, README-customer-build-properties.md
+
+================================================================================
+1. SVN SQL REPOSITORIES (checked out during pipeline)
+================================================================================
+
+CASA Customer:
+  SVN Path: svn://repo.wondersoft.in/eshopaid_web/CIFile/{release_tag}/SQL/eShopaid_DB
+  Local Checkout Path: {BasePath}\DBObjects\sql
+  Source: Jenkinsfile (Checkout stage, CASA case)
+
+Netsuite Customer:
+  SVN Path: svn://repo.wondersoft.in/netsuite_web/CIFile/{release_tag}/SQL/Netsuite_DB
+  Local Checkout Path: {BasePath}\DBObjects\sql
+  Source: Jenkinsfile (Checkout stage, Netsuite case)
+
+Generic (from checkout-config.properties template):
+  SVN Path: svn://repo.wondersoft.in/{customer}_web/CIFile/{release_tag}/SQL/{customer}_DB
+  Local Checkout Path: DBObjects\sql
+  Source: README-customer-configuration.md
+
+================================================================================
+2. LOCAL SQL DIRECTORIES (referenced in build properties)
+================================================================================
+
+CASA:
+  eShopaidDBPath          -> {BasePath}\DBObjects\sql
+  eShopaidDBSourcePath    -> {BasePath}\DBObjects\sql
+  eShopaidDBUpdatePath    -> {BasePath}\CASA\Build\sql
+  CASA_DBPath             -> {BasePath}\DBObjects\sql
+  CASA_DBSourcePath       -> {BasePath}\DBObjects\sql
+  CASA_DBUpdatePath       -> {BasePath}\CASA\Build\sql
+  Source: CASA-build.properties, README-customer-configuration.md
+
+Netsuite:
+  NetsuiteDBPath          -> {BasePath}\DBObjects\sql
+  NetsuiteDBSourcePath    -> {BasePath}\DBObjects\sql
+  NetsuiteDBUpdatePath    -> {BasePath}\Netsuite\Build\sql
+  Netsuite_DBPath         -> {BasePath}\DBObjects\sql
+  Netsuite_DBSourcePath   -> {BasePath}\DBObjects\sql
+  Netsuite_DBUpdatePath   -> {BasePath}\Netsuite\Build\sql
+  Source: Netsuite-build.properties, README-customer-configuration.md
+
+================================================================================
+3. DATABASE NAMES
+================================================================================
+
+  CASA_DatabaseName       -> eShopaid_DB
+  Netsuite_DatabaseName   -> Netsuite_DB
+  Source: CASA-build.properties, Netsuite-build.properties
+
+================================================================================
+4. TEMPORARY DB FILES PATH
+================================================================================
+
+  TempDBPath              -> {BasePath}\TempDBFiles
+  Source: CASA-build.properties, Netsuite-build.properties
+
+================================================================================
+5. BUILD SQL OUTPUT PATHS (generated during MSBuild)
+================================================================================
+
+  CASA Build SQL Output   -> {BasePath}\CASA\Build\sql
+  Netsuite Build SQL Output -> {BasePath}\Netsuite\Build\sql
+  Source: CASA-build.properties, Netsuite-build.properties
+
+================================================================================
+6. SUMMARY OF SQL SCRIPT LOCATIONS
+================================================================================
+
+| Location Type          | CASA Path                          | Netsuite Path                        |
+|------------------------|------------------------------------|--------------------------------------|
+| SVN Source             | SQL/eShopaid_DB                    | SQL/Netsuite_DB                      |
+| DB Objects (checkout)  | {BasePath}\DBObjects\sql           | {BasePath}\DBObjects\sql             |
+| Build SQL Output       | {BasePath}\CASA\Build\sql          | {BasePath}\Netsuite\Build\sql        |
+| Temp DB Files          | {BasePath}\TempDBFiles             | {BasePath}\TempDBFiles               |
+
+Note: Individual .sql script filenames are stored in the SVN repositories
+(SQL/eShopaid_DB and SQL/Netsuite_DB) and are checked out at build time.
+The exact script names depend on the release_tag selected during the pipeline run.
