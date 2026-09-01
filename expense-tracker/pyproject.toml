@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "expense-tracker"
+version = "1.0.0"
+description = "Local-first daily expense tracker with a CLI and a browser interface"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = []
+
+[project.scripts]
+expenses = "expense_tracker.cli:main"
+
+[tool.setuptools]
+packages = ["expense_tracker"]
+
+[tool.setuptools.package-data]
+expense_tracker = ["static/*"]
