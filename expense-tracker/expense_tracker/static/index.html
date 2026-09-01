@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expense Tracker</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">$</span>
+    <div>
+      <h1>Expense Tracker</h1>
+      <p class="subtitle" id="retention-note">Loading&hellip;</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <a class="button ghost" id="export-link" href="/export.csv">Export CSV</a>
+  </div>
+</header>
+
+<main>
+  <section class="panel entry" aria-labelledby="entry-heading">
+    <div class="panel-head">
+      <h2 id="entry-heading">Log an expense</h2>
+      <span class="pill" id="day-total">&mdash;</span>
+    </div>
+
+    <form id="entry-form" autocomplete="off">
+      <input type="hidden" id="edit-id" value="">
+      <div class="field-row">
+        <label class="field date-field">
+          <span>Date</span>
+          <input type="date" id="field-date" required>
+        </label>
+        <label class="field grow">
+          <span>Item</span>
+          <input type="text" id="field-item" placeholder="What did you buy?" required maxlength="200">
+        </label>
+      </div>
+      <div class="field-row">
+        <label class="field">
+          <span>Cost</span>
+          <input type="text" inputmode="decimal" id="field-amount" placeholder="0.00" required>
+        </label>
+        <label class="field grow">
+          <span>Category</span>
+          <div class="category-row">
+            <select id="field-category"></select>
+            <button type="button" class="button ghost small" id="new-category">+ New</button>
+          </div>
+        </label>
+      </div>
+      <label class="field">
+        <span>Note <em>(optional)</em></span>
+        <input type="text" id="field-note" placeholder="Anything worth remembering" maxlength="500">
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="button primary" id="submit-button">Add expense</button>
+        <button type="button" class="button ghost hidden" id="cancel-edit">Cancel</button>
+        <span class="hint">Tip: keep adding entries, the form stays ready for the next one.</span>
+      </div>
+    </form>
+
+    <div class="day-list">
+      <h3>Entries for <span id="day-label">today</span></h3>
+      <div id="day-entries"></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="month-heading">
+    <div class="panel-head">
+      <h2 id="month-heading">This month</h2>
+      <span class="pill" id="month-total">&mdash;</span>
+    </div>
+    <p class="muted" id="month-label"></p>
+    <div id="month-breakdown" class="bars"></div>
+
+    <h3 class="section-title">Last 12 months</h3>
+    <p class="muted" id="window-total"></p>
+    <div id="trend" class="trend"></div>
+  </section>
+
+  <section class="panel wide" aria-labelledby="history-heading">
+    <div class="panel-head">
+      <h2 id="history-heading">History</h2>
+      <span class="pill" id="history-total">&mdash;</span>
+    </div>
+
+    <div class="filters">
+      <label class="field">
+        <span>Range</span>
+        <select id="filter-range">
+          <option value="month">This month</option>
+          <option value="last-month">Last month</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="365">Last 12 months</option>
+          <option value="custom">Custom&hellip;</option>
+        </select>
+      </label>
+      <label class="field hidden" id="custom-from-field">
+        <span>From</span>
+        <input type="date" id="filter-from">
+      </label>
+      <label class="field hidden" id="custom-to-field">
+        <span>To</span>
+        <input type="date" id="filter-to">
+      </label>
+      <label class="field">
+        <span>Category</span>
+        <select id="filter-category"><option value="">All categories</option></select>
+      </label>
+      <label class="field grow">
+        <span>Search</span>
+        <input type="search" id="filter-search" placeholder="Item or note text">
+      </label>
+    </div>
+
+    <div id="history-breakdown" class="bars compact"></div>
+    <div id="history-entries"></div>
+  </section>
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="/app.js"></script>
+</body>
+</html>
