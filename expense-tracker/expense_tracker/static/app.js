@@ -346,6 +346,11 @@ filterRange.addEventListener("change", () => {
   const custom = filterRange.value === "custom";
   $("custom-from-field").classList.toggle("hidden", !custom);
   $("custom-to-field").classList.toggle("hidden", !custom);
+  if (custom && !filterFrom.value && !filterTo.value) {
+    const now = new Date();
+    filterFrom.value = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString("en-CA");
+    filterTo.value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toLocaleDateString("en-CA");
+  }
   loadHistory().catch((error) => toast(error.message, true));
 });
 
