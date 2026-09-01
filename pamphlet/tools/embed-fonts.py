@@ -1,46 +1,45 @@
-"""Download Google Fonts latin subsets and emit a CSS file with base64 data URIs."""
+"""Build assets/fonts.css with the pamphlet's webfonts inlined as base64.
+
+Fonts come from Fontsource rather than the Google Fonts CSS API on purpose.
+The API now serves Playfair Display as a variable font, and headless Chrome
+embeds variable fonts into PDFs as Type3 glyph procedures, which some prepress
+workflows render poorly and which breaks text selection. Fontsource ships
+static per-weight instances, so Chrome embeds them as ordinary CID fonts.
+"""
 import base64
-import re
+import pathlib
 import urllib.request
 
-UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/120.0 Safari/537.36")
+CDN = "https://cdn.jsdelivr.net/npm/@fontsource/{slug}/files/{slug}-latin-{weight}-normal.woff2"
 
+# (css family name, fontsource slug, weights actually used by the pamphlet)
 FAMILIES = [
-    "Playfair+Display:ital,wght@0,700;0,800;0,900;1,700",
-    "Poppins:wght@400;500;600;700;800",
-    "Bebas+Neue",
+    ("Playfair Display", "playfair-display", [700, 900]),
+    ("Poppins", "poppins", [400, 500, 600, 700, 800]),
+    ("Bebas Neue", "bebas-neue", [400]),
 ]
 
+OUT = pathlib.Path(__file__).resolve().parent.parent / "assets" / "fonts.css"
 
-def fetch(url):
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        return resp.read()
-
-
-blocks_out = []
-for family in FAMILIES:
-    css = fetch(f"https://fonts.googleapis.com/css2?family={family}&display=swap").decode()
-    for block in re.findall(r"@font-face\s*\{[^}]*\}", css):
-        # Keep only the latin subset to keep the embedded payload small.
-        rng = re.search(r"unicode-range:\s*([^;]+);", block)
-        if not rng or "U+0000-00FF" not in rng.group(1):
-            continue
-        url = re.search(r"url\((https://[^)]+\.woff2)\)", block)
-        if not url:
-            continue
-        data = fetch(url.group(1))
+blocks = []
+total = 0
+for family, slug, weights in FAMILIES:
+    for weight in weights:
+        url = CDN.format(slug=slug, weight=weight)
+        with urllib.request.urlopen(url, timeout=60) as resp:
+            data = resp.read()
+        total += len(data)
         b64 = base64.b64encode(data).decode()
-        block = block.replace(url.group(1), f"data:font/woff2;base64,{b64}")
-        block = re.sub(r"\s*unicode-range:[^;]+;", "", block)
-        blocks_out.append(block.strip())
-        name = re.search(r"font-family:\s*'([^']+)'", block).group(1)
-        weight = re.search(r"font-weight:\s*([\d ]+)", block)
-        style = re.search(r"font-style:\s*(\w+)", block)
-        print(f"embedded {name} {weight.group(1).strip() if weight else '?'} "
-              f"{style.group(1) if style else ''} ({len(data)//1024} KB)")
+        blocks.append(
+            "@font-face {\n"
+            f"  font-family: '{family}';\n"
+            "  font-style: normal;\n"
+            f"  font-weight: {weight};\n"
+            "  font-display: block;\n"
+            f"  src: url(data:font/woff2;base64,{b64}) format('woff2');\n"
+            "}"
+        )
+        print(f"embedded {family} {weight} ({len(data) // 1024} KB)")
 
-with open("fonts.css", "w") as fh:
-    fh.write("\n".join(blocks_out) + "\n")
-print(f"\nwrote fonts.css with {len(blocks_out)} faces")
+OUT.write_text("\n".join(blocks) + "\n")
+print(f"\nwrote {OUT} — {len(blocks)} faces, {total // 1024} KB of font data")

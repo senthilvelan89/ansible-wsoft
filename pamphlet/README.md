@@ -62,7 +62,20 @@ Requires Python with `Pillow` and `pypdfium2`.
 - `assets/logo.png` — circular pot-and-leaf emblem.
 - `assets/fonts.css` — Playfair Display, Poppins and Bebas Neue, latin subsets
   embedded as base64 so the flyer never depends on a network or on locally
-  installed fonts.
+  installed fonts. These are static per-weight instances from Fontsource, not
+  the variable fonts the Google Fonts API now serves: Chrome embeds variable
+  fonts into PDFs as Type3 glyph procedures, which some prepress RIPs render
+  poorly and which breaks text selection. The PDF should contain only Type0
+  fonts, which you can confirm with:
+
+  ```bash
+  python3 - <<'PY'
+  import re
+  raw = open('out/velan-home-foods-pamphlet.pdf', 'rb').read()
+  print('Type3 (want 0):', len(re.findall(rb'/Subtype\s*/Type3', raw)))
+  print('Type0 (want 8):', len(re.findall(rb'/Subtype\s*/Type0', raw)))
+  PY
+  ```
 
 `tools/make-cutouts.py` and `tools/embed-fonts.py` regenerate the transparent
 cutouts and the font stylesheet respectively.
