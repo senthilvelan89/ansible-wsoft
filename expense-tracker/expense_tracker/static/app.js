@@ -90,7 +90,8 @@ function debounce(fn, wait) {
 function monthLabel(key) {
   const [year, month] = key.split("-").map(Number);
   const date = new Date(year, month - 1, 1);
-  return date.toLocaleString(undefined, { month: "short" }) + (month === 1 ? " " + String(year).slice(2) : "");
+  const name = date.toLocaleString(undefined, { month: "short" });
+  return month === 1 ? `${name} '${String(year).slice(2)}` : name;
 }
 
 // ------------------------------------------------------------- rendering

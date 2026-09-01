@@ -361,7 +361,7 @@ def serve(
     url = "http://%s:%d/" % (host, server.server_port)
     print("Expense tracker is running at %s" % url)
     print("Database: %s" % database.path)
-    print("Press Ctrl+C to stop.")
+    print("Press Ctrl+C to stop.", flush=True)
     if open_browser:
         threading.Timer(0.6, lambda: webbrowser.open(url)).start()
     try:
