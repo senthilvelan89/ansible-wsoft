@@ -450,11 +450,13 @@
   }
 
   .contact .val {
+    display: block;
     font-family: 'Bebas Neue', sans-serif;
     font-size: 25pt;
     line-height: 1.02;
     letter-spacing: .05em;
     color: var(--cream);
+    text-decoration: none;
   }
 
   .contact .note {
@@ -463,14 +465,33 @@
     color: rgba(232, 220, 192, .68);
   }
 
+  .contact .val:hover { text-decoration: none; }
+
   .cta {
     flex: 0 0 auto;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    gap: 4.5mm;
   }
 
-  .cta .btn {
+  /* Carries its own light quiet zone so it stays scannable on the dark band. */
+  .cta .qr {
+    flex: 0 0 auto;
     display: block;
-    padding: 3.4mm 9mm 2.9mm;
+    width: 22mm;
+    height: 22mm;
+    border-radius: 1.4mm;
+    background: var(--cream);
+  }
+
+  .cta .copy { text-align: center; }
+
+  .cta .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2.4mm;
+    padding: 3.2mm 8mm 2.7mm;
     border-radius: 100px;
     background: linear-gradient(180deg, var(--gold-soft), var(--gold));
     color: var(--green-deep);
@@ -478,13 +499,21 @@
     font-size: 19pt;
     line-height: 1;
     letter-spacing: .09em;
+    text-decoration: none;
+  }
+
+  .cta .btn svg {
+    flex: 0 0 auto;
+    width: 5.4mm;
+    height: 5.4mm;
+    display: block;
   }
 
   .cta .btn-sub {
     margin-top: 1.8mm;
     font-size: 7pt;
     font-weight: 600;
-    letter-spacing: .14em;
+    letter-spacing: .12em;
     text-transform: uppercase;
     color: rgba(232, 220, 192, .7);
   }
@@ -518,6 +547,10 @@
   <symbol id="ico-phone" viewBox="0 0 24 24">
     <path fill="#0a3327"
       d="M6.6 2.5h2.9c.7 0 1.3.5 1.4 1.2l.7 3.4c.1.6-.1 1.2-.6 1.5l-1.7 1.2a13 13 0 0 0 5.1 5.1l1.2-1.7c.4-.5 1-.7 1.6-.6l3.4.7c.7.1 1.2.7 1.2 1.4v2.9c0 .9-.7 1.6-1.6 1.6C10.4 21.2 2.9 13.7 2.9 4.1c0-.9.7-1.6 1.6-1.6Z"/>
+  </symbol>
+
+  <symbol id="ico-whatsapp" viewBox="0 0 24 24">
+    <path fill="#0a3327" d="M12.04 2.02c-5.46 0-9.9 4.44-9.9 9.9 0 1.75.46 3.45 1.32 4.95L2.06 22l5.25-1.38a9.87 9.87 0 0 0 4.73 1.2c5.46 0 9.9-4.44 9.9-9.9s-4.44-9.9-9.9-9.9Zm5.8 14.11c-.24.68-1.4 1.3-1.93 1.35-.53.06-1.03.25-3.5-.72-2.98-1.18-4.85-4.28-5-4.48-.14-.2-1.18-1.57-1.18-3s.75-2.13 1.02-2.42c.27-.29.58-.36.78-.36h.56c.18 0 .42-.7.66.5.24.58.82 2 .89 2.15.07.15.12.32.02.51-.1.19-.15.31-.3.48l-.43.51c-.15.15-.3.31-.13.6.17.29.75 1.24 1.61 2.01 1.1.99 2.04 1.3 2.33 1.45.29.15.46.12.63-.7.17-.2.73-.85.92-1.14.2-.29.39-.24.66-.14.27.1 1.7.8 1.99.95.29.15.48.22.55.34.07.13.07.73-.17 1.41Z"/>
   </symbol>
 
   <symbol id="ico-van" viewBox="0 0 48 32">
@@ -586,13 +619,16 @@
       <span class="icon"><svg viewBox="0 0 24 24"><use href="#ico-phone"/></svg></span>
       <div>
         <div class="lbl">Call or text to order</div>
-        <div class="val">0451 640 791</div>
+        <a class="val" href="tel:+61451640791">0451 640 791</a>
         <div class="note">Velan Foods &middot; South Indian breakfast, made at home</div>
       </div>
     </div>
     <div class="cta">
-      <span class="btn">Order Now</span>
-      <div class="btn-sub">Fresh &middot; Hot &middot; Homemade</div>
+      <img class="qr" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAuQAAALkAQMAAAB9arImAAAABlBMVEUKMyf/+OeDC+f7AAAC9klEQVR42u3dQW7bMBAFUKIX4P1vqRuoTVA71MyXU7QwUICPC8OxlLfQ5mMocjjON45j0Ol0Op1Op9PpdDqd/g/6qGN+/Pb4+LhtfH78/vNsvyXg19Uf452DTqfT6fT/TX/k6lzT9isq19Sd67f1vpkBuUqn0+n0nXM1l6rnM2Ff16sdkKt0Op1Ol6s1Ustk8Jm/yVU6nU6n07/J1SPc96hc0zywXKXT6XS6XL1/v3qZBy7xuRatp/erdDqdTqfXOnQdMxSjrz86IFfpdDqdvmmuprHecrQCtSxZutnF47nT6XQ6fdtcbaVqSt0j/9ZKX/UqnU6n07evV4+QtWmSd4Tp4xlqWLlKp9Pp9M3r1ZSm5WpfnvS8rwSzXKXT6XT6prl65D/TKuBSoLaVwctVz51Op9PpO+ZqLlVnm+lN39ZwLTErV+l0Op2+b71a+ijl3oaj1atppZN6lU6n0+l716u3PSBmWwpcuhy2027Uq3Q6nU5Xr64FaqtDZ1gynBYPD/PAdDqdTperZypa267V1AjiCJty7LOh0+l0+ua5mjbWpGnhNWHHdXnwSA0jPHc6nU6n75mr4xqV8/pC9WukY+Nu2xrKVTqdTqfvW6+Wk8tbkJ65aF1L1Xr0uedOp9Pp9B1zteyzWS+c3y0Ubk2XzAPT6XQ6fft6NVWu43b/zPO/Z1i8tFzw3Ol0Op2+Z67OEIvnHzVYKklsHphOp9PpcvVlt9/brTjpqlyl0+l0ulyNvYDvzyu/1qvjWqrqC0Gn0+n0zXM1jdZlqb9kbSuIp/erdDqdTper/eTyGXbNlCVLI/Q7LGEtV+l0Op2+aa7OXKq2CyN0FFav0ul0Op3ecvUrEfPRb72aTbXuZdLYc6fT6XS6XD3b1O68a8k085no5oHpdDqdLldrro7rG9TLf6Sjz/UxpNPpdLpcffl+tR1gc4Yj4koPRLlKp9Pp9O1ztYwZWj3cdNtvNewwD0yn0+n0vXP1TeOg0+l0Op1Op9PpdDr97/SfagJ3nOPb85kAAAAASUVORK5CYII=" alt="QR code linking to a WhatsApp chat with Velan Foods">
+      <div class="copy">
+        <a class="btn" href="https://wa.me/61451640791?text=Hi%20Velan%20Foods%2C%20I%20would%20like%20to%20place%20a%20breakfast%20order"><svg viewBox="0 0 24 24"><use href="#ico-whatsapp"/></svg>Order Now</a>
+        <div class="btn-sub">Scan or tap to chat</div>
+      </div>
     </div>
   </footer>
 
