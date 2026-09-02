@@ -3,7 +3,7 @@
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
-SRC="file://$PWD/velan-home-foods-pamphlet.html"
+SRC="file://$PWD/velan-foods-pamphlet.html"
 OUT="$PWD/out"
 mkdir -p "$OUT"
 
@@ -25,19 +25,19 @@ run() {
   rm -rf "$ud"
 }
 
-run --print-to-pdf="$OUT/velan-home-foods-pamphlet.pdf" --no-pdf-header-footer
+run --print-to-pdf="$OUT/velan-foods-pamphlet.pdf" --no-pdf-header-footer
 
 # Rasterise the PDF (not the screen view) so the PNG matches the print output.
 python3 tools/pdf_to_png.py \
-  "$OUT/velan-home-foods-pamphlet.pdf" \
-  "$OUT/velan-home-foods-pamphlet.png" 200
+  "$OUT/velan-foods-pamphlet.pdf" \
+  "$OUT/velan-foods-pamphlet.png" 200
 
 # Lightweight copy that GitHub and messaging apps will display inline.
 python3 tools/pdf_to_png.py \
-  "$OUT/velan-home-foods-pamphlet.pdf" \
+  "$OUT/velan-foods-pamphlet.pdf" \
   "preview.jpg" 110
 
-for f in "$OUT/velan-home-foods-pamphlet.pdf" "$OUT/velan-home-foods-pamphlet.png" "$PWD/preview.jpg"; do
+for f in "$OUT/velan-foods-pamphlet.pdf" "$OUT/velan-foods-pamphlet.png" "$PWD/preview.jpg"; do
   if [ -s "$f" ]; then
     echo "ok   $f ($(du -h "$f" | cut -f1))"
   else

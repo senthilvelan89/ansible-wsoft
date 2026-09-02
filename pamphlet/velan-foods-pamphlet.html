@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Velan Home Foods &mdash; South Indian Breakfast</title>
+<title>Velan Foods &mdash; South Indian Breakfast</title>
 <link rel="stylesheet" href="assets/fonts.css">
 <style>
   :root {
@@ -99,13 +99,13 @@
 
   .masthead {
     position: relative;
-    padding: 12mm 16mm 0;
+    padding: 8mm 16mm 0;
     text-align: center;
   }
 
   .logo {
     position: absolute;
-    top: 10mm;
+    top: 8mm;
     left: 11mm;
     width: 21mm;
     height: 21mm;
@@ -115,7 +115,7 @@
 
   .estd {
     position: absolute;
-    top: 16mm;
+    top: 12mm;
     right: 13mm;
     text-align: right;
     font-size: 7pt;
@@ -151,18 +151,33 @@
   h1 {
     font-family: 'Playfair Display', serif;
     font-weight: 900;
-    font-size: 45pt;
-    line-height: .98;
-    letter-spacing: -.005em;
-    margin-top: 3mm;
+    font-size: 54pt;
+    line-height: 1;
+    letter-spacing: .005em;
+    margin-top: 2mm;
     color: var(--green-deep);
   }
 
-  /* Sized so both title lines end up almost exactly the same width. */
-  h1 .line2 {
-    display: block;
-    font-size: 34pt;
-    letter-spacing: .015em;
+  /* Ornament between the name and the descriptor. Gold would disappear against
+     the mustard field here, so it takes the same ink as the type. */
+  .flourish {
+    width: 76mm;
+    margin: 2mm auto 0;
+    color: var(--green-deep);
+    opacity: .8;
+  }
+
+  .flourish svg { display: block; width: 100%; height: auto; }
+
+  .tagline {
+    margin-top: 1.2mm;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-style: italic;
+    font-size: 25pt;
+    line-height: 1.05;
+    letter-spacing: .01em;
+    color: var(--green-deep);
   }
 
   /* ---------- hero platter ---------- */
@@ -170,8 +185,8 @@
   .platter {
     position: absolute;
     left: 50%;
-    top: 53mm;
-    width: 156mm;
+    top: 58mm;
+    width: 148mm;
     transform: translateX(-50%);
     filter: drop-shadow(0 3mm 5mm rgba(0, 0, 0, .28));
   }
@@ -207,12 +222,20 @@
     color: var(--gold);
   }
 
+  /* Echoes the masthead ornament. Gold reads properly against the green here. */
+  .menu-head .flourish {
+    width: 64mm;
+    margin-top: 2.2mm;
+    color: var(--gold);
+    opacity: .9;
+  }
+
   .items {
     display: grid;
     grid-template-columns: 1fr 1fr;
     column-gap: 9mm;
     row-gap: 3.6mm;
-    margin-top: 6.5mm;
+    margin-top: 4mm;
     list-style: none;
   }
 
@@ -269,7 +292,7 @@
     position: absolute;
     left: 15mm;
     right: 15mm;
-    top: 231mm;
+    top: 234mm;
     display: flex;
     align-items: center;
     gap: 5mm;
@@ -416,6 +439,18 @@
     </g>
   </symbol>
 
+  <symbol id="flourish" viewBox="0 0 240 16">
+    <g fill="currentColor">
+      <path d="M18 7.3 96 6.5v3L18 8.7Z"/>
+      <path d="M222 7.3 144 6.5v3l78-.8Z"/>
+      <circle cx="105" cy="8" r="1.7"/>
+      <circle cx="135" cy="8" r="1.7"/>
+      <path d="M120 1c4 3.5 4 10.5 0 14-4-3.5-4-10.5 0-14Z"/>
+      <path d="M117.4 8.6c-2.7-3.1-6.9-4.1-10.7-2.5 2.7 3.1 6.9 4.1 10.7 2.5Z"/>
+      <path d="M122.6 8.6c2.7-3.1 6.9-4.1 10.7-2.5-2.7 3.1-6.9 4.1-10.7 2.5Z"/>
+    </g>
+  </symbol>
+
   <symbol id="ico-phone" viewBox="0 0 24 24">
     <path fill="#0a3327"
       d="M6.6 2.5h2.9c.7 0 1.3.5 1.4 1.2l.7 3.4c.1.6-.1 1.2-.6 1.5l-1.7 1.2a13 13 0 0 0 5.1 5.1l1.2-1.7c.4-.5 1-.7 1.6-.6l3.4.7c.7.1 1.2.7 1.2 1.4v2.9c0 .9-.7 1.6-1.6 1.6C10.4 21.2 2.9 13.7 2.9 4.1c0-.9.7-1.6 1.6-1.6Z"/>
@@ -441,11 +476,13 @@
   <div class="leaf leaf-br"><svg viewBox="0 0 200 92"><use href="#banana-leaf"/></svg></div>
 
   <header class="masthead">
-    <div class="logo"><img src="assets/logo.png" alt="Velan Home Foods"></div>
+    <div class="logo"><img src="assets/logo.png" alt="Velan Foods"></div>
     <div class="estd"><b>Home Kitchen</b>Made fresh daily</div>
 
     <p class="eyebrow">Authentic &middot; Home Cooked</p>
-    <h1>Velan Home Foods<span class="line2">South Indian Breakfast</span></h1>
+    <h1>Velan Foods</h1>
+    <div class="flourish"><svg viewBox="0 0 240 16"><use href="#flourish"/></svg></div>
+    <p class="tagline">South Indian Breakfast</p>
   </header>
 
   <div class="platter"><img src="assets/platter.png" alt="South Indian breakfast platter on a banana leaf"></div>
@@ -454,6 +491,7 @@
     <div class="menu-head">
       <h2>Our Breakfast Menu</h2>
       <p>Every plate made to order</p>
+      <div class="flourish"><svg viewBox="0 0 240 16"><use href="#flourish"/></svg></div>
     </div>
 
     <ul class="items">
@@ -485,7 +523,7 @@
       <div>
         <div class="lbl">Call or text to order</div>
         <div class="val">042034343</div>
-        <div class="note">Velan Home Foods &middot; South Indian breakfast, made at home</div>
+        <div class="note">Velan Foods &middot; South Indian breakfast, made at home</div>
       </div>
     </div>
     <div class="cta">

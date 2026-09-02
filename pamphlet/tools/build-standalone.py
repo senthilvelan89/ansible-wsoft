@@ -8,8 +8,8 @@ import pathlib
 import re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SRC = ROOT / "velan-home-foods-pamphlet.html"
-DST = ROOT / "out" / "velan-home-foods-pamphlet-standalone.html"
+SRC = ROOT / "velan-foods-pamphlet.html"
+DST = ROOT / "out" / "velan-foods-pamphlet-standalone.html"
 
 MIME = {".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp"}
 

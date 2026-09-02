@@ -1,18 +1,18 @@
-# Velan Home Foods — one-page pamphlet
+# Velan Foods — one-page pamphlet
 
-A print-ready A4 flyer for Velan Home Foods' South Indian breakfast menu. The
+A print-ready A4 flyer for Velan Foods' South Indian breakfast menu. The
 design is a single HTML file with all measurements in millimetres, so what you
 see on screen is exactly what comes out of the printer.
 
-![The Velan Home Foods pamphlet](preview.jpg)
+![The Velan Foods pamphlet](preview.jpg)
 
 ## What to hand to a printer
 
 | File | Use |
 | --- | --- |
-| `out/velan-home-foods-pamphlet.pdf` | Send this to a print shop. A4 portrait, single page, full-bleed colour. |
-| `out/velan-home-foods-pamphlet.png` | 200 dpi image for WhatsApp, Instagram or email. |
-| `out/velan-home-foods-pamphlet-standalone.html` | The whole pamphlet in one file (fonts and photos inlined). Open in any browser and print — no other files needed. |
+| `out/velan-foods-pamphlet.pdf` | Send this to a print shop. A4 portrait, single page, full-bleed colour. |
+| `out/velan-foods-pamphlet.png` | 200 dpi image for WhatsApp, Instagram or email. |
+| `out/velan-foods-pamphlet-standalone.html` | The whole pamphlet in one file (fonts and photos inlined). Open in any browser and print — no other files needed. |
 | `preview.jpg` | Small preview for viewing on the web, as shown above. |
 
 Note that GitHub shows `.html` files as source code rather than rendering them.
@@ -21,7 +21,7 @@ open it in a browser.
 
 ## Details on the flyer
 
-- **Business:** Velan Home Foods — South Indian Breakfast
+- **Business:** Velan Foods — South Indian Breakfast
 - **Menu:** Idly, Ven Pongal, Vadai, Vada Curry, Sambar, Chutney (3 types), Kesari
 - **Phone:** 042034343
 - **Offer:** Free delivery, minimum order $30 AUD
@@ -29,7 +29,7 @@ open it in a browser.
 ## Editing
 
 Text and prices live in the markup at the bottom of
-`velan-home-foods-pamphlet.html`; colours and type sizes are CSS custom
+`velan-foods-pamphlet.html`; colours and type sizes are CSS custom
 properties and rules at the top of the same file. The palette is deep green
 `#0c3b2c` with mustard gold `#f5b820`.
 
@@ -39,14 +39,16 @@ budget for the A4 page is:
 
 | Block | Top | Notes |
 | --- | --- | --- |
-| Masthead | 10 mm | Logo, eyebrow rule, two-line title |
-| Platter | 53 mm | Overlaps the masthead's lower margin and the band change |
+| Masthead | 8 mm | Logo, eyebrow rule, name, flourish, italic tagline |
+| Platter | 58 mm | Overlaps the masthead's lower margin and the band change |
 | Colour band change | 116 mm | Gold hairline; the platter straddles this line |
-| Menu | 157 mm | Two columns, 4 + 3 items |
-| Delivery offer | 231 mm | |
+| Menu | 157 mm | Heading, gold flourish, two columns of 4 + 3 items |
+| Delivery offer | 234 mm | |
 | Footer | 260 mm | Phone and call to action |
 
-After editing, re-render and check the result.
+After editing, re-render and check the result. The tightest clearances are the
+4 mm between the italic tagline and the steam at the top of the platter, and the
+4 mm between the last menu item and the delivery band.
 
 ## Re-rendering
 
@@ -79,7 +81,7 @@ Requires Python with `Pillow` and `pypdfium2`.
   ```bash
   python3 - <<'PY'
   import re
-  raw = open('out/velan-home-foods-pamphlet.pdf', 'rb').read()
+  raw = open('out/velan-foods-pamphlet.pdf', 'rb').read()
   print('Type3 (want 0):', len(re.findall(rb'/Subtype\s*/Type3', raw)))
   print('Type0 (want 8):', len(re.findall(rb'/Subtype\s*/Type0', raw)))
   PY

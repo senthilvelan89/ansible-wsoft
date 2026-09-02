@@ -10,22 +10,24 @@ import base64
 import pathlib
 import urllib.request
 
-CDN = "https://cdn.jsdelivr.net/npm/@fontsource/{slug}/files/{slug}-latin-{weight}-normal.woff2"
+CDN = "https://cdn.jsdelivr.net/npm/@fontsource/{slug}/files/{slug}-latin-{weight}-{style}.woff2"
 
-# (css family name, fontsource slug, weights actually used by the pamphlet)
+# (css family name, fontsource slug, faces actually used by the pamphlet)
 FAMILIES = [
-    ("Playfair Display", "playfair-display", [700, 900]),
-    ("Poppins", "poppins", [400, 500, 600, 700, 800]),
-    ("Bebas Neue", "bebas-neue", [400]),
+    ("Playfair Display", "playfair-display",
+     [(700, "normal"), (700, "italic"), (900, "normal")]),
+    ("Poppins", "poppins",
+     [(w, "normal") for w in (400, 500, 600, 700, 800)]),
+    ("Bebas Neue", "bebas-neue", [(400, "normal")]),
 ]
 
 OUT = pathlib.Path(__file__).resolve().parent.parent / "assets" / "fonts.css"
 
 blocks = []
 total = 0
-for family, slug, weights in FAMILIES:
-    for weight in weights:
-        url = CDN.format(slug=slug, weight=weight)
+for family, slug, faces in FAMILIES:
+    for weight, style in faces:
+        url = CDN.format(slug=slug, weight=weight, style=style)
         with urllib.request.urlopen(url, timeout=60) as resp:
             data = resp.read()
         total += len(data)
@@ -33,13 +35,13 @@ for family, slug, weights in FAMILIES:
         blocks.append(
             "@font-face {\n"
             f"  font-family: '{family}';\n"
-            "  font-style: normal;\n"
+            f"  font-style: {style};\n"
             f"  font-weight: {weight};\n"
             "  font-display: block;\n"
             f"  src: url(data:font/woff2;base64,{b64}) format('woff2');\n"
             "}"
         )
-        print(f"embedded {family} {weight} ({len(data) // 1024} KB)")
+        print(f"embedded {family} {weight} {style} ({len(data) // 1024} KB)")
 
 OUT.write_text("\n".join(blocks) + "\n")
 print(f"\nwrote {OUT} — {len(blocks)} faces, {total // 1024} KB of font data")
