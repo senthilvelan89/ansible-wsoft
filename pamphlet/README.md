@@ -39,7 +39,8 @@ budget for the A4 page is:
 
 | Block | Top | Notes |
 | --- | --- | --- |
-| Masthead | 8 mm | Logo, title, kicker pill |
+| Masthead | 10 mm | Logo, eyebrow rule, two-line title |
+| Platter | 53 mm | Overlaps the masthead's lower margin and the band change |
 | Colour band change | 116 mm | Gold hairline; the platter straddles this line |
 | Menu | 157 mm | Two columns, 4 + 3 items |
 | Delivery offer | 231 mm | |
