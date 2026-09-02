@@ -23,7 +23,7 @@ open it in a browser.
 
 - **Business:** Velan Foods — South Indian Breakfast
 - **Menu:** Idly, Ven Pongal, Vadai, Vada Curry, Sambar, Chutney (3 types), Kesari
-- **Phone:** 042034343
+- **Phone:** 0451 640 791
 - **Offer:** Free delivery, minimum order $30 AUD
 
 ## Editing
