@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Render the pamphlet to a print-ready PDF and a preview PNG using headless Chrome.
+# Render the pamphlet to a print-ready PDF, a 200 dpi PNG and a small web preview.
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
@@ -32,7 +32,12 @@ python3 tools/pdf_to_png.py \
   "$OUT/velan-home-foods-pamphlet.pdf" \
   "$OUT/velan-home-foods-pamphlet.png" 200
 
-for f in "$OUT/velan-home-foods-pamphlet.pdf" "$OUT/velan-home-foods-pamphlet.png"; do
+# Lightweight copy that GitHub and messaging apps will display inline.
+python3 tools/pdf_to_png.py \
+  "$OUT/velan-home-foods-pamphlet.pdf" \
+  "preview.jpg" 110
+
+for f in "$OUT/velan-home-foods-pamphlet.pdf" "$OUT/velan-home-foods-pamphlet.png" "$PWD/preview.jpg"; do
   if [ -s "$f" ]; then
     echo "ok   $f ($(du -h "$f" | cut -f1))"
   else

@@ -4,6 +4,8 @@ A print-ready A4 flyer for Velan Home Foods' South Indian breakfast menu. The
 design is a single HTML file with all measurements in millimetres, so what you
 see on screen is exactly what comes out of the printer.
 
+![The Velan Home Foods pamphlet](preview.jpg)
+
 ## What to hand to a printer
 
 | File | Use |
@@ -11,6 +13,11 @@ see on screen is exactly what comes out of the printer.
 | `out/velan-home-foods-pamphlet.pdf` | Send this to a print shop. A4 portrait, single page, full-bleed colour. |
 | `out/velan-home-foods-pamphlet.png` | 200 dpi image for WhatsApp, Instagram or email. |
 | `out/velan-home-foods-pamphlet-standalone.html` | The whole pamphlet in one file (fonts and photos inlined). Open in any browser and print — no other files needed. |
+| `preview.jpg` | Small preview for viewing on the web, as shown above. |
+
+Note that GitHub shows `.html` files as source code rather than rendering them.
+To see the flyer, open `preview.jpg` or the PDF, or download an HTML file and
+open it in a browser.
 
 ## Details on the flyer
 
