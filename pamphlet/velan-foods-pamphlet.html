@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Velan Foods &mdash; South Indian Breakfast</title>
+<link rel="stylesheet" href="assets/fonts.css">
+<style>
+  :root {
+    --green-deep: #0a3327;
+    --green: #0c3b2c;
+    --green-mid: #14513c;
+    --gold: #f5b820;
+    --gold-soft: #ffd166;
+    --cream: #fff8e7;
+    --cream-dim: #e8dcc0;
+    --leaf: #5aa544;
+  }
+
+  @page { size: A4 portrait; margin: 0; }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    background: #6b6b6b;
+    font-family: 'Poppins', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Keep the flood colours when the file is printed straight from a browser. */
+  body, .page {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    position: relative;
+    width: 210mm;
+    height: 297mm;
+    margin: 0 auto;
+    overflow: hidden;
+    background: var(--gold);
+    color: var(--green);
+  }
+
+  @media screen {
+    body { padding: 12mm 0; }
+    .page { box-shadow: 0 8mm 24mm rgba(0, 0, 0, .45); }
+  }
+
+  /* ---------- background bands ---------- */
+
+  .band-green {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 116mm;
+    bottom: 0;
+    background:
+      radial-gradient(120% 70% at 50% 0%, var(--green-mid) 0%, transparent 60%),
+      var(--green);
+  }
+
+  /* Sits just inside the green band, where gold actually reads as an accent. */
+  .band-rule {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 116mm;
+    height: 1.3mm;
+    background: linear-gradient(180deg, #ffdf95, var(--gold-soft));
+  }
+
+  /* Warm glow behind the platter so the cutout sits in the light. */
+  .glow {
+    position: absolute;
+    left: 50%;
+    top: 104mm;
+    width: 170mm;
+    height: 72mm;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(50% 50% at 50% 50%, rgba(255, 231, 150, .85), rgba(245, 184, 32, 0) 70%);
+  }
+
+  /* ---------- decorative leaves ---------- */
+
+  .leaf {
+    position: absolute;
+    color: var(--leaf);
+  }
+
+  .leaf svg { display: block; width: 100%; height: auto; }
+
+  .leaf-tl { top: -8mm;   left: -10mm;  width: 52mm; transform: rotate(28deg);  opacity: .5; }
+  .leaf-tr { top: 24mm;   right: -16mm; width: 46mm; transform: rotate(-142deg); opacity: .4; }
+  .leaf-bl { bottom: 26mm; left: -12mm; width: 44mm; transform: rotate(-38deg); opacity: .28; }
+  .leaf-br { bottom: 44mm; right: -13mm; width: 40mm; transform: rotate(150deg); opacity: .24; }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    position: relative;
+    padding: 8mm 16mm 0;
+    text-align: center;
+  }
+
+  .logo {
+    position: absolute;
+    top: 8mm;
+    left: 11mm;
+    width: 21mm;
+    height: 21mm;
+  }
+
+  .logo img { display: block; width: 100%; height: 100%; }
+
+  .estd {
+    position: absolute;
+    top: 12mm;
+    right: 13mm;
+    text-align: right;
+    font-size: 7pt;
+    font-weight: 700;
+    letter-spacing: .16em;
+    line-height: 1.5;
+    color: #8a6410;
+    text-transform: uppercase;
+  }
+
+  .estd b { display: block; color: var(--green); font-size: 8.5pt; }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 3mm;
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: .3em;
+    text-transform: uppercase;
+    color: #7d5a0c;
+  }
+
+  .eyebrow::before,
+  .eyebrow::after {
+    content: '';
+    width: 12mm;
+    height: 1px;
+    background: currentColor;
+    opacity: .55;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: 54pt;
+    line-height: 1;
+    letter-spacing: .005em;
+    margin-top: 2mm;
+    color: var(--green-deep);
+  }
+
+  /* Ornament between the name and the descriptor. Gold would disappear against
+     the mustard field here, so it takes the same ink as the type. */
+  .flourish {
+    width: 76mm;
+    margin: 2mm auto 0;
+    color: var(--green-deep);
+    opacity: .8;
+  }
+
+  .flourish svg { display: block; width: 100%; height: auto; }
+
+  .tagline {
+    margin-top: 1.2mm;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-style: italic;
+    font-size: 25pt;
+    line-height: 1.05;
+    letter-spacing: .01em;
+    color: var(--green-deep);
+  }
+
+  /* ---------- hero platter ---------- */
+
+  .platter {
+    position: absolute;
+    left: 50%;
+    top: 58mm;
+    width: 148mm;
+    transform: translateX(-50%);
+    filter: drop-shadow(0 3mm 5mm rgba(0, 0, 0, .28));
+  }
+
+  .platter img { display: block; width: 100%; height: auto; }
+
+  /* ---------- menu ---------- */
+
+  .menu {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 157mm;
+    padding: 0 15mm;
+  }
+
+  .menu-head { text-align: center; }
+
+  .menu-head h2 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 23pt;
+    letter-spacing: .02em;
+    color: var(--cream);
+  }
+
+  .menu-head p {
+    margin-top: .8mm;
+    font-size: 8pt;
+    font-weight: 600;
+    letter-spacing: .26em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  /* Echoes the masthead ornament. Gold reads properly against the green here. */
+  .menu-head .flourish {
+    width: 64mm;
+    margin-top: 2.2mm;
+    color: var(--gold);
+    opacity: .9;
+  }
+
+  .items {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 9mm;
+    row-gap: 2.9mm;
+    margin-top: 4mm;
+    list-style: none;
+  }
+
+  .items li {
+    display: flex;
+    gap: 3mm;
+    align-items: baseline;
+  }
+
+  .items li::before {
+    content: '';
+    flex: 0 0 auto;
+    width: 2.4mm;
+    height: 2.4mm;
+    margin-top: 1.6mm;
+    border-radius: 50%;
+    background: var(--gold);
+  }
+
+  .items .name {
+    display: block;
+    font-size: 12.5pt;
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--cream);
+  }
+
+  .items .desc {
+    display: block;
+    margin-top: .4mm;
+    font-size: 7.8pt;
+    font-weight: 400;
+    line-height: 1.3;
+    color: rgba(232, 220, 192, .82);
+  }
+
+  .items .tag {
+    display: inline-block;
+    margin-left: 1.6mm;
+    padding: .3mm 1.8mm;
+    border-radius: 2px;
+    background: var(--gold);
+    color: var(--green-deep);
+    font-size: 6.6pt;
+    font-weight: 800;
+    letter-spacing: .07em;
+    vertical-align: 1.1mm;
+    text-transform: uppercase;
+  }
+
+  /* ---------- delivery offer ---------- */
+
+  .offer {
+    position: absolute;
+    left: 15mm;
+    right: 15mm;
+    top: 231mm;
+    display: flex;
+    align-items: center;
+    gap: 5mm;
+    padding: 4.6mm 6mm;
+    border-radius: 2.5mm;
+    background: linear-gradient(100deg, var(--gold-soft), var(--gold) 55%, #e9a90f);
+    color: var(--green-deep);
+  }
+
+  .offer .van { flex: 0 0 auto; width: 13mm; }
+  .offer .van svg { display: block; width: 100%; height: auto; }
+
+  .offer .copy { flex: 1 1 auto; }
+
+  .offer .headline {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 21pt;
+    line-height: 1;
+    letter-spacing: .035em;
+  }
+
+  .offer .sub {
+    margin-top: .6mm;
+    font-size: 8.2pt;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .offer .min {
+    flex: 0 0 auto;
+    padding-left: 5mm;
+    border-left: .5mm solid rgba(10, 51, 39, .28);
+    text-align: center;
+  }
+
+  .offer .min .amt {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 27pt;
+    line-height: .85;
+  }
+
+  .offer .min .lbl {
+    font-size: 6.6pt;
+    font-weight: 800;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+  }
+
+  /* ---------- footer ---------- */
+
+  .footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 40mm;
+    padding: 0 15mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: var(--green-deep);
+    border-top: 1mm solid rgba(245, 184, 32, .35);
+  }
+
+  .footer-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6mm;
+  }
+
+  .custom-note {
+    margin-top: 3mm;
+    padding-top: 2.6mm;
+    border-top: .25mm solid rgba(245, 184, 32, .28);
+    text-align: center;
+    font-size: 8.4pt;
+    font-weight: 600;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--gold-soft);
+  }
+
+  .contact {
+    display: flex;
+    align-items: center;
+    gap: 3.6mm;
+  }
+
+  .icon {
+    flex: 0 0 auto;
+    width: 11mm;
+    height: 11mm;
+    border-radius: 50%;
+    background: var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .icon svg { width: 5.6mm; height: 5.6mm; display: block; }
+
+  .contact .lbl {
+    font-size: 7pt;
+    font-weight: 700;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  .contact .val {
+    display: block;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 25pt;
+    line-height: 1.02;
+    letter-spacing: .05em;
+    color: var(--cream);
+    text-decoration: none;
+  }
+
+  .contact .note {
+    font-size: 7.2pt;
+    font-weight: 500;
+    color: rgba(232, 220, 192, .68);
+  }
+
+  .contact .val:hover { text-decoration: none; }
+
+  .cta {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 4.5mm;
+  }
+
+  /* Carries its own light quiet zone so it stays scannable on the dark band. */
+  .cta .qr {
+    flex: 0 0 auto;
+    display: block;
+    width: 22mm;
+    height: 22mm;
+    border-radius: 1.4mm;
+    background: var(--cream);
+  }
+
+  .cta .copy { text-align: center; }
+
+  .cta .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2.4mm;
+    padding: 3.2mm 8mm 2.7mm;
+    border-radius: 100px;
+    background: linear-gradient(180deg, var(--gold-soft), var(--gold));
+    color: var(--green-deep);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 19pt;
+    line-height: 1;
+    letter-spacing: .09em;
+    text-decoration: none;
+  }
+
+  .cta .btn svg {
+    flex: 0 0 auto;
+    width: 5.4mm;
+    height: 5.4mm;
+    display: block;
+  }
+
+  .cta .btn-sub {
+    margin-top: 1.8mm;
+    font-size: 7pt;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: rgba(232, 220, 192, .7);
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="banana-leaf" viewBox="0 0 200 92">
+    <path fill="currentColor"
+      d="M4 46C4 46 44 4 106 4c46 0 78 20 90 42-12 22-44 42-90 42C44 88 4 46 4 46Z"/>
+    <path stroke="#eaf7d8" stroke-width="2.4" stroke-linecap="round" opacity=".75" d="M10 46h180"/>
+    <g stroke="#dff0c8" stroke-width="1.5" stroke-linecap="round" opacity=".55">
+      <path d="M38 44 24 26M62 42 50 21M86 41 76 18M110 41 102 16M134 42 128 19M158 44 154 24"/>
+      <path d="M38 48 24 66M62 50 50 71M86 51 76 74M110 51 102 76M134 50 128 73M158 48 154 68"/>
+    </g>
+  </symbol>
+
+  <symbol id="flourish" viewBox="0 0 240 16">
+    <g fill="currentColor">
+      <path d="M18 7.3 96 6.5v3L18 8.7Z"/>
+      <path d="M222 7.3 144 6.5v3l78-.8Z"/>
+      <circle cx="105" cy="8" r="1.7"/>
+      <circle cx="135" cy="8" r="1.7"/>
+      <path d="M120 1c4 3.5 4 10.5 0 14-4-3.5-4-10.5 0-14Z"/>
+      <path d="M117.4 8.6c-2.7-3.1-6.9-4.1-10.7-2.5 2.7 3.1 6.9 4.1 10.7 2.5Z"/>
+      <path d="M122.6 8.6c2.7-3.1 6.9-4.1 10.7-2.5-2.7 3.1-6.9 4.1-10.7 2.5Z"/>
+    </g>
+  </symbol>
+
+  <symbol id="ico-phone" viewBox="0 0 24 24">
+    <path fill="#0a3327"
+      d="M6.6 2.5h2.9c.7 0 1.3.5 1.4 1.2l.7 3.4c.1.6-.1 1.2-.6 1.5l-1.7 1.2a13 13 0 0 0 5.1 5.1l1.2-1.7c.4-.5 1-.7 1.6-.6l3.4.7c.7.1 1.2.7 1.2 1.4v2.9c0 .9-.7 1.6-1.6 1.6C10.4 21.2 2.9 13.7 2.9 4.1c0-.9.7-1.6 1.6-1.6Z"/>
+  </symbol>
+
+  <symbol id="ico-whatsapp" viewBox="0 0 24 24">
+    <path fill="#0a3327" d="M12.04 2.02c-5.46 0-9.9 4.44-9.9 9.9 0 1.75.46 3.45 1.32 4.95L2.06 22l5.25-1.38a9.87 9.87 0 0 0 4.73 1.2c5.46 0 9.9-4.44 9.9-9.9s-4.44-9.9-9.9-9.9Zm5.8 14.11c-.24.68-1.4 1.3-1.93 1.35-.53.06-1.03.25-3.5-.72-2.98-1.18-4.85-4.28-5-4.48-.14-.2-1.18-1.57-1.18-3s.75-2.13 1.02-2.42c.27-.29.58-.36.78-.36h.56c.18 0 .42-.7.66.5.24.58.82 2 .89 2.15.07.15.12.32.02.51-.1.19-.15.31-.3.48l-.43.51c-.15.15-.3.31-.13.6.17.29.75 1.24 1.61 2.01 1.1.99 2.04 1.3 2.33 1.45.29.15.46.12.63-.7.17-.2.73-.85.92-1.14.2-.29.39-.24.66-.14.27.1 1.7.8 1.99.95.29.15.48.22.55.34.07.13.07.73-.17 1.41Z"/>
+  </symbol>
+
+  <symbol id="ico-van" viewBox="0 0 48 32">
+    <path fill="#0a3327"
+      d="M2 5a3 3 0 0 1 3-3h20a3 3 0 0 1 3 3v3h6.6c1 0 1.9.5 2.5 1.3l4.8 6.9c.4.5.6 1.2.6 1.8V23a3 3 0 0 1-3 3h-2.3a5.2 5.2 0 0 0-10.4 0H17.7a5.2 5.2 0 0 0-10.4 0H5a3 3 0 0 1-3-3V5Zm26 7v5h11.9l-3.5-5H28Z"/>
+    <circle cx="12.5" cy="26" r="4.3" fill="#0a3327"/>
+    <circle cx="33.5" cy="26" r="4.3" fill="#0a3327"/>
+  </symbol>
+</svg>
+
+<div class="page">
+
+  <div class="band-green"></div>
+  <div class="band-rule"></div>
+  <div class="glow"></div>
+
+  <div class="leaf leaf-tl"><svg viewBox="0 0 200 92"><use href="#banana-leaf"/></svg></div>
+  <div class="leaf leaf-tr"><svg viewBox="0 0 200 92"><use href="#banana-leaf"/></svg></div>
+  <div class="leaf leaf-bl"><svg viewBox="0 0 200 92"><use href="#banana-leaf"/></svg></div>
+  <div class="leaf leaf-br"><svg viewBox="0 0 200 92"><use href="#banana-leaf"/></svg></div>
+
+  <header class="masthead">
+    <div class="logo"><img src="assets/logo.png" alt="Velan Foods"></div>
+    <div class="estd"><b>Home Kitchen</b>Made fresh daily</div>
+
+    <p class="eyebrow">Authentic &middot; Home Cooked</p>
+    <h1>Velan Foods</h1>
+    <div class="flourish"><svg viewBox="0 0 240 16"><use href="#flourish"/></svg></div>
+    <p class="tagline">South Indian Breakfast</p>
+  </header>
+
+  <div class="platter"><img src="assets/platter.png" alt="South Indian breakfast platter on a banana leaf"></div>
+
+  <section class="menu">
+    <div class="menu-head">
+      <h2>Our Breakfast Menu</h2>
+      <p>Every plate made to order</p>
+      <div class="flourish"><svg viewBox="0 0 240 16"><use href="#flourish"/></svg></div>
+    </div>
+
+    <ul class="items">
+      <li><span><span class="name">Idly</span><span class="desc">Feather-soft steamed rice cakes</span></span></li>
+      <li><span><span class="name">Sambar</span><span class="desc">Tangy lentil &amp; vegetable stew</span></span></li>
+      <li><span><span class="name">Ven Pongal</span><span class="desc">Creamy rice &amp; moong dal, ghee, pepper, cashews</span></span></li>
+      <li><span><span class="name">Chutney<span class="tag">3 Types</span></span><span class="desc">Coconut, tomato and coriander</span></span></li>
+      <li><span><span class="name">Vadai</span><span class="desc">Crisp golden lentil doughnuts</span></span></li>
+      <li><span><span class="name">Kesari</span><span class="desc">Sweet semolina with ghee-roasted cashews</span></span></li>
+      <li><span><span class="name">Vada Curry</span><span class="desc">Spiced lentil patties in rich gravy</span></span></li>
+    </ul>
+  </section>
+
+  <div class="offer">
+    <div class="van"><svg viewBox="0 0 48 32"><use href="#ico-van"/></svg></div>
+    <div class="copy">
+      <div class="headline">Free Delivery</div>
+      <div class="sub">On every order over the minimum &mdash; hot to your door.</div>
+    </div>
+    <div class="min">
+      <div class="amt">$30</div>
+      <div class="lbl">Min. order (AUD)</div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-main">
+      <div class="contact">
+        <span class="icon"><svg viewBox="0 0 24 24"><use href="#ico-phone"/></svg></span>
+        <div>
+          <div class="lbl">Call or text to order</div>
+          <a class="val" href="tel:+61451640791">0451 640 791</a>
+          <div class="note">Velan Foods &middot; South Indian breakfast, made at home</div>
+        </div>
+      </div>
+      <div class="cta">
+        <img class="qr" src="assets/whatsapp-qr.png" alt="QR code linking to a WhatsApp chat with Velan Foods">
+        <div class="copy">
+          <a class="btn" href="https://wa.me/61451640791?text=Hi%20Velan%20Foods%2C%20I%20would%20like%20to%20place%20a%20breakfast%20order"><svg viewBox="0 0 24 24"><use href="#ico-whatsapp"/></svg>Order Now</a>
+          <div class="btn-sub">Scan or tap to chat</div>
+        </div>
+      </div>
+    </div>
+    <p class="custom-note">Call us for customised orders</p>
+  </footer>
+
+</div>
+</body>
+</html>
