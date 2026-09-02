@@ -49,12 +49,13 @@ budget for the A4 page is:
 | Platter | 58 mm | Overlaps the masthead's lower margin and the band change |
 | Colour band change | 116 mm | Gold hairline; the platter straddles this line |
 | Menu | 157 mm | Heading, gold flourish, two columns of 4 + 3 items |
-| Delivery offer | 234 mm | |
-| Footer | 260 mm | Phone and call to action |
+| Delivery offer | 231 mm | |
+| Footer | 257 mm | Phone, QR and call to action, then the customised-orders line |
 
 After editing, re-render and check the result. The tightest clearances are the
 4 mm between the italic tagline and the steam at the top of the platter, and the
-4 mm between the last menu item and the delivery band.
+3 mm between the last menu item and the delivery band. The footer leaves a 5 mm
+margin below the last line of type, which is the trim safety allowance.
 
 ## Re-rendering
 

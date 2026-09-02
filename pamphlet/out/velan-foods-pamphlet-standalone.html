@@ -298,7 +298,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     column-gap: 9mm;
-    row-gap: 3.6mm;
+    row-gap: 2.9mm;
     margin-top: 4mm;
     list-style: none;
   }
@@ -356,7 +356,7 @@
     position: absolute;
     left: 15mm;
     right: 15mm;
-    top: 234mm;
+    top: 231mm;
     display: flex;
     align-items: center;
     gap: 5mm;
@@ -412,14 +412,32 @@
     left: 0;
     right: 0;
     bottom: 0;
-    height: 37mm;
+    height: 40mm;
     padding: 0 15mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: var(--green-deep);
+    border-top: 1mm solid rgba(245, 184, 32, .35);
+  }
+
+  .footer-main {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 6mm;
-    background: var(--green-deep);
-    border-top: 1mm solid rgba(245, 184, 32, .35);
+  }
+
+  .custom-note {
+    margin-top: 3mm;
+    padding-top: 2.6mm;
+    border-top: .25mm solid rgba(245, 184, 32, .28);
+    text-align: center;
+    font-size: 8.4pt;
+    font-weight: 600;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--gold-soft);
   }
 
   .contact {
@@ -615,21 +633,24 @@
   </div>
 
   <footer class="footer">
-    <div class="contact">
-      <span class="icon"><svg viewBox="0 0 24 24"><use href="#ico-phone"/></svg></span>
-      <div>
-        <div class="lbl">Call or text to order</div>
-        <a class="val" href="tel:+61451640791">0451 640 791</a>
-        <div class="note">Velan Foods &middot; South Indian breakfast, made at home</div>
+    <div class="footer-main">
+      <div class="contact">
+        <span class="icon"><svg viewBox="0 0 24 24"><use href="#ico-phone"/></svg></span>
+        <div>
+          <div class="lbl">Call or text to order</div>
+          <a class="val" href="tel:+61451640791">0451 640 791</a>
+          <div class="note">Velan Foods &middot; South Indian breakfast, made at home</div>
+        </div>
+      </div>
+      <div class="cta">
+        <img class="qr" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAuQAAALkAQMAAAB9arImAAAABlBMVEUKMyf/+OeDC+f7AAAC9klEQVR42u3dQW7bMBAFUKIX4P1vqRuoTVA71MyXU7QwUICPC8OxlLfQ5mMocjjON45j0Ol0Op1Op9PpdDqd/g/6qGN+/Pb4+LhtfH78/vNsvyXg19Uf452DTqfT6fT/TX/k6lzT9isq19Sd67f1vpkBuUqn0+n0nXM1l6rnM2Ff16sdkKt0Op1Ol6s1Ustk8Jm/yVU6nU6n07/J1SPc96hc0zywXKXT6XS6XL1/v3qZBy7xuRatp/erdDqdTqfXOnQdMxSjrz86IFfpdDqdvmmuprHecrQCtSxZutnF47nT6XQ6fdtcbaVqSt0j/9ZKX/UqnU6n07evV4+QtWmSd4Tp4xlqWLlKp9Pp9M3r1ZSm5WpfnvS8rwSzXKXT6XT6prl65D/TKuBSoLaVwctVz51Op9PpO+ZqLlVnm+lN39ZwLTErV+l0Op2+b71a+ijl3oaj1atppZN6lU6n0+l716u3PSBmWwpcuhy2027Uq3Q6nU5Xr64FaqtDZ1gynBYPD/PAdDqdTperZypa267V1AjiCJty7LOh0+l0+ua5mjbWpGnhNWHHdXnwSA0jPHc6nU6n75mr4xqV8/pC9WukY+Nu2xrKVTqdTqfvW6+Wk8tbkJ65aF1L1Xr0uedOp9Pp9B1zteyzWS+c3y0Ubk2XzAPT6XQ6fft6NVWu43b/zPO/Z1i8tFzw3Ol0Op2+Z67OEIvnHzVYKklsHphOp9PpcvVlt9/brTjpqlyl0+l0ulyNvYDvzyu/1qvjWqrqC0Gn0+n0zXM1jdZlqb9kbSuIp/erdDqdTper/eTyGXbNlCVLI/Q7LGEtV+l0Op2+aa7OXKq2CyN0FFav0ul0Op3ecvUrEfPRb72aTbXuZdLYc6fT6XS6XD3b1O68a8k085no5oHpdDqdLldrro7rG9TLf6Sjz/UxpNPpdLpcffl+tR1gc4Yj4koPRLlKp9Pp9O1ztYwZWj3cdNtvNewwD0yn0+n0vXP1TeOg0+l0Op1Op9PpdDr97/SfagJ3nOPb85kAAAAASUVORK5CYII=" alt="QR code linking to a WhatsApp chat with Velan Foods">
+        <div class="copy">
+          <a class="btn" href="https://wa.me/61451640791?text=Hi%20Velan%20Foods%2C%20I%20would%20like%20to%20place%20a%20breakfast%20order"><svg viewBox="0 0 24 24"><use href="#ico-whatsapp"/></svg>Order Now</a>
+          <div class="btn-sub">Scan or tap to chat</div>
+        </div>
       </div>
     </div>
-    <div class="cta">
-      <img class="qr" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAuQAAALkAQMAAAB9arImAAAABlBMVEUKMyf/+OeDC+f7AAAC9klEQVR42u3dQW7bMBAFUKIX4P1vqRuoTVA71MyXU7QwUICPC8OxlLfQ5mMocjjON45j0Ol0Op1Op9PpdDqd/g/6qGN+/Pb4+LhtfH78/vNsvyXg19Uf452DTqfT6fT/TX/k6lzT9isq19Sd67f1vpkBuUqn0+n0nXM1l6rnM2Ff16sdkKt0Op1Ol6s1Ustk8Jm/yVU6nU6n07/J1SPc96hc0zywXKXT6XS6XL1/v3qZBy7xuRatp/erdDqdTqfXOnQdMxSjrz86IFfpdDqdvmmuprHecrQCtSxZutnF47nT6XQ6fdtcbaVqSt0j/9ZKX/UqnU6n07evV4+QtWmSd4Tp4xlqWLlKp9Pp9M3r1ZSm5WpfnvS8rwSzXKXT6XT6prl65D/TKuBSoLaVwctVz51Op9PpO+ZqLlVnm+lN39ZwLTErV+l0Op2+b71a+ijl3oaj1atppZN6lU6n0+l716u3PSBmWwpcuhy2027Uq3Q6nU5Xr64FaqtDZ1gynBYPD/PAdDqdTperZypa267V1AjiCJty7LOh0+l0+ua5mjbWpGnhNWHHdXnwSA0jPHc6nU6n75mr4xqV8/pC9WukY+Nu2xrKVTqdTqfvW6+Wk8tbkJ65aF1L1Xr0uedOp9Pp9B1zteyzWS+c3y0Ubk2XzAPT6XQ6fft6NVWu43b/zPO/Z1i8tFzw3Ol0Op2+Z67OEIvnHzVYKklsHphOp9PpcvVlt9/brTjpqlyl0+l0ulyNvYDvzyu/1qvjWqrqC0Gn0+n0zXM1jdZlqb9kbSuIp/erdDqdTper/eTyGXbNlCVLI/Q7LGEtV+l0Op2+aa7OXKq2CyN0FFav0ul0Op3ecvUrEfPRb72aTbXuZdLYc6fT6XS6XD3b1O68a8k085no5oHpdDqdLldrro7rG9TLf6Sjz/UxpNPpdLpcffl+tR1gc4Yj4koPRLlKp9Pp9O1ztYwZWj3cdNtvNewwD0yn0+n0vXP1TeOg0+l0Op1Op9PpdDr97/SfagJ3nOPb85kAAAAASUVORK5CYII=" alt="QR code linking to a WhatsApp chat with Velan Foods">
-      <div class="copy">
-        <a class="btn" href="https://wa.me/61451640791?text=Hi%20Velan%20Foods%2C%20I%20would%20like%20to%20place%20a%20breakfast%20order"><svg viewBox="0 0 24 24"><use href="#ico-whatsapp"/></svg>Order Now</a>
-        <div class="btn-sub">Scan or tap to chat</div>
-      </div>
-    </div>
+    <p class="custom-note">Call us for customised orders</p>
   </footer>
 
 </div>
