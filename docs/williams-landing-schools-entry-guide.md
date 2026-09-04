@@ -14,6 +14,7 @@ This is **not** enrolment advice from a school or the Department. Policies, fees
 2. Use the **nearby school list** if you also want out-of-zone, Catholic or independent options.
 3. Read **Entry rules in plain English** so you know what is *not* used (NAPLAN is not a government enrolment test).
 4. If you want a **selective, HAP, SEAL, scholarship or Magis** place, jump to **Competitive pathways** and **Tutors**.
+5. If the child is in **Year 1**, start with [year-1-maths-phonics-reasoning.md](year-1-maths-phonics-reasoning.md) — phonics, number sense and play-based reasoning. Do not start exam coaching at Grade 1.
 
 Williams Landing does **not** have its own government P–12. The suburb has a government **primary** (Williams Landing Primary, Prep–6). For Years 7–12, families use nearby P–9 colleges, then a senior college, or a 7–12 / P–12 school.
 
@@ -149,6 +150,8 @@ These providers sit in the same 5–7 km pocket and advertise **SEHS / EduTest /
 5. Keep **Year 5–8 classroom maths and reading** strong. SEHS does not go past Year 8 content; it rewards reasoning speed and writing under time.
 
 If the goal is **only** a zoned government P–9 or P–12 place, you do **not** need exam tutoring. Spend the money on the school’s own transition, or on tutoring only if the child is aiming at Cory / Westbourne / Magis / Everest / SELP.
+
+For a **Year 1** child, build phonics, number bonds and play-based reasoning first. Materials and a daily plan: [year-1-maths-phonics-reasoning.md](year-1-maths-phonics-reasoning.md).
 
 ---
 
