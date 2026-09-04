@@ -15,6 +15,8 @@ This is a home plan, not a diagnosis or a school program. If reading or number i
 3. Buy or print the **starter kit** below. You do not need a tutoring centre yet.
 4. Run the **daily 40-minute rhythm** for four weeks before you add anything else.
 
+If the long-term goal is **Suzanne Cory / EduTest / HAP**, use the weekday timetable in [grade-1-competitive-exam-pathway.md](grade-1-competitive-exam-pathway.md). Keep **Reading Eggs as a 10-minute reward**, not the whole lesson.
+
 If you do not know the school program yet, start with **SPELD SA free decodables** plus a ten-frame and counters. That combination is enough for month one.
 
 ---
@@ -311,7 +313,7 @@ Consider a short, specialist block if, after a term of the daily rhythm:
 
 Then choose a tutor who uses **structured literacy** (synthetic phonics) and **concrete maths**, not a high-school student with a worksheet pack. The centres listed in the schools guide (Integral, Brainworks, Schoolola) are built for **later** selective / scholarship exams. For Year 1, a SPELD-aware literacy tutor or a primary teacher who knows ten-frames will usually be a better fit.
 
-Put the exam pathway on the calendar much later: gentle enrichment through Year 3–4, structured reasoning/maths extension from Year 5, SEHS / EduTest prep from Year 6–8. That path is in [williams-landing-schools-entry-guide.md](williams-landing-schools-entry-guide.md).
+Put the exam pathway on the calendar much later: gentle enrichment through Year 3–4, structured reasoning/maths extension from Year 5, SEHS / EduTest prep from Year 6–8. Daily Grade 1 timetable (including how to use Reading Eggs): [grade-1-competitive-exam-pathway.md](grade-1-competitive-exam-pathway.md). School list: [williams-landing-schools-entry-guide.md](williams-landing-schools-entry-guide.md).
 
 ---
 
