@@ -38,9 +38,9 @@ If you **do not have Mathseeds**, do Tuesday and Thursday with a ten-frame and c
 | **Thursday** | **Mathseeds** → **Lessons** (next lesson) | **Adding / taking away.** Number lines, “how many left.” | 4 spoken problems: “You had 10, I ate 3. How many? How do you know?” No counting from 1 if she can use 10. |
 | **Friday** | **Library** (or the lesson **book quiz**) | **Meaning.** Pick one short book at her level. Read it. Do the quiz. | 2 questions: “What happened? Why did they…?” This is verbal reasoning. |
 | **Saturday** | **Reading Eggs** → **Spelling** (or Driving Tests if spelling is not on the account) | **Write the sounds.** One list / one test. | You dictate 4 words from the week. She writes. Tick each *sound*, not just the whole word. |
-| **Sunday** | **Off the app** (or 10 min **Play** only if she asks) | **Rest + story.** | You read a real picture book / chapter for 15–20 min. Ask “What might happen next?” |
+| **Sunday** | **No study.** App stays closed. | **Day off.** | Nothing on the plan. A normal bedtime story is fine if you already do one — it is not homework. |
 
-**Every night (including app days):** you still read *to* her. That is the vocabulary engine for later verbal reasoning.
+**Every night Monday–Saturday:** you still read *to* her. That is the vocabulary engine for later verbal reasoning. **Sunday is no study** — skip the app and the “lesson” questions.
 
 ### What “done” looks like each day
 
@@ -50,7 +50,7 @@ If you **do not have Mathseeds**, do Tuesday and Thursday with a ten-frame and c
 - **Thursday:** she can explain one add/take-away with “I know because…”
 - **Friday:** she can retell the library book in two sentences.
 - **Saturday:** she can write 4 words using sounds, not copying.
-- **Sunday:** she enjoyed the story. That counts.
+- **Sunday:** no checklist. Day off.
 
 ### Rules so the week works
 
@@ -62,9 +62,9 @@ If you **do not have Mathseeds**, do Tuesday and Thursday with a ten-frame and c
 
 ---
 
-## Reading Eggs — keep it, demote it
+## Reading Eggs — if you also run the longer 50-minute plan
 
-Use it as the **fun last 10 minutes**, after you have already taught.
+The **Reading Eggs week** above is enough for Grade 1 most days. If you later add the longer timetable, Eggs stays the **last 10 minutes**, never the only thing.
 
 **Do**
 
@@ -110,9 +110,9 @@ Suggested slot: **after snack, before screens** (for example 4:00–4:50). If af
 ### Weekend
 
 - **Saturday:** one longer puzzle (jigsaw, tangram, Rush Hour) **or** a board game with you. No “catch-up workbook.”
-- **Sunday:** off, or library. You still read at bedtime.
+- **Sunday:** **no study.** No app, no phonics, no maths, no quizzes.
 
-**Hard cap:** if she is tired or teary, stop after phonics + story. A wrecked Sunday does not create a high-ATAR child.
+**Hard cap:** if she is tired or teary on a weekday, stop after phonics + story. Do not make it up on Sunday.
 
 ---
 
