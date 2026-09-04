@@ -15,6 +15,7 @@ This is **not** enrolment advice from a school or the Department. Policies, fees
 3. Read **Entry rules in plain English** so you know what is *not* used (NAPLAN is not a government enrolment test).
 4. If you want a **selective, HAP, SEAL, scholarship or Magis** place, jump to **Competitive pathways** and **Tutors**.
 5. If the child is in **Year 1**, start with [year-1-maths-phonics-reasoning.md](year-1-maths-phonics-reasoning.md) — phonics, number sense and play-based reasoning. Do not start exam coaching at Grade 1.
+6. For a **Better Education score** (60–100 Years 7–10 rating, plus VCE medians), jump to **Better Education scores (2025)**.
 
 Williams Landing does **not** have its own government P–12. The suburb has a government **primary** (Williams Landing Primary, Prep–6). For Years 7–12, families use nearby P–9 colleges, then a senior college, or a 7–12 / P–12 school.
 
@@ -55,41 +56,119 @@ Places are **application + capacity + often a placement test**. NAPLAN and repor
 
 ---
 
+## Better Education scores (2025)
+
+[Better Education](https://bettereducation.com.au/schoolranking.aspx) publishes two different numbers. Do not mix them up.
+
+| Number | What it is | Scale | Use it for |
+|---|---|---|---|
+| **State Overall Score** | Years 7–10 academic rating (NAPLAN-based). This is the “score” on their suburb maps. | **60–100**. 100 is the top of the Victorian list. 60 is the floor. **80 is mid-pack, not 80%.** | Comparing P–9 / 7–10 campuses |
+| **VCE median study score** | Year 12 results. State median is about **30**. | Usually mid-20s to high 30s. **% of scores 40+** is the high-achiever share. | Comparing schools that go to Year 12 |
+
+**Read the scores with these caveats**
+
+- **Suzanne Cory’s 100 is selective intake**, not a neighbourhood-school comparison. Students already sat an exam to get in.
+- A high score often tracks **family background (SES / ICSEA)** as much as teaching. Westbourne (98) and Alamanda (94) serve more advantaged catchments than Laverton (73).
+- P–9 schools have **no VCE**. Senior colleges (Point Cook Senior, Tarneit Senior) have **no Years 7–10 score**.
+- New schools (**Bemin**, **Yurran**) have no published score yet.
+- This is **not** an entry test for a government place. A zoned child still gets in regardless of the school’s rating.
+- Figures below are **2025** from Better Education suburb rating pages (Point Cook 3030, Hoppers Crossing / Tarneit / Truganina 3029, Altona 3018). Recheck the live page; they update after each NAPLAN / VCE release.
+
+### Ranked by Better Education Years 7–10 score
+
+| BE score | School | Years | Notes |
+|---|---|---|---|
+| **100** | Suzanne Cory High School | 9–12 | Selective. Top of the Victorian 7–10 list (1st percentile). |
+| **98** | Westbourne Grammar | ELC–12 | Highest local non-selective. About 5th percentile statewide. |
+| **95** | Heathdale Christian College | K–12 | Strong independent. |
+| **94** | Alamanda K–9 | K–9 | Highest **government** P–9 in this pocket (about 14th percentile). Everest stream. |
+| **93** | Good News Lutheran | P–12 | Independent. |
+| **92** | Islamic College of Melbourne | P–12 | Independent. Strong VCE 40+ rate as well. |
+| **91** (2023) | Al-Taqwa College | P–12 | Last published on the Victorian top-secondary list (2023). Not shown on the 2025 3029 suburb table. **VCE 2025 is strong** (median 33). |
+| **86** | Featherbrook P–9 | P–9 | Government. |
+| **86** | Saltwater P–9 | P–9 | Government. 2027 enrolment restriction. |
+| **86** | Werribee Secondary College | 7–12 | SELP + IB. |
+| **85** | Point Cook P–9 | P–9 | Government. HAP stream. |
+| **85** | Thomas Carr College | 7–12 | Catholic. Magis stream. |
+| **85** | MacKillop College, Werribee | 7–12 | Catholic. |
+| **82** | Dohertys Creek P–9 | P–9 | Often a Williams Landing zone option. |
+| **80** | Truganina P–9 (listed as Truganina College) | P–9 | Government. |
+| **79** | Altona College | P–12 | Government. |
+| **77** | Carranballac P–9 | P–9 | Often a Williams Landing zone option. |
+| **77** | Tarneit P–9 | P–9 | Government. |
+| **76** | Hoppers Crossing Secondary | 7–12 | Government. |
+| **73** | Laverton P–12 | P–12 | Closest government through-to-12. |
+| **72** | The Grange P–12 | P–12 | HAP stream. |
+| — | Emmanuel College (Notre Dame / college-wide) | 7–12 | No 2025 7–10 score on the Point Cook / Altona suburb tables. **VCE 2025 median 28**. |
+| — | Point Cook Senior Secondary | 10–12 | No 7–10 score (senior campus only). |
+| — | Tarneit Senior College | 10–12 | No 7–10 score. |
+| — | Bemin Secondary College | 7–12 | Too new. |
+| — | Yurran P–9 | P–9 | Opened 2026. |
+
+### VCE 2025 (schools that run Year 12)
+
+Better Education ranks VCE mainly by **median study score**, then **% of scores 40+**. State median is about 30.
+
+| School | Median VCE | Scores 40+ | BE VCE rank (where published) |
+|---|---|---|---|
+| Suzanne Cory | **35** | **25%** | 4th among government schools |
+| Al-Taqwa | **33** | **11.9%** | 75 (independent table) |
+| Westbourne Grammar | **32** | **12%** | 63 (independent table) |
+| ICOM | **32** | **15.8%** | — |
+| Heathdale (Werribee) | **31** | **7.4%** | 140 |
+| MacKillop, Werribee | **29** | **4.7%** | — |
+| Good News Lutheran | **29** | **5.9%** | — |
+| Werribee Secondary | **28** | **6.4%** | 54 among government schools |
+| Emmanuel (college-wide) | **28** | **2.8%** | 333 |
+| Point Cook Senior | **28** | **2.7%** | — |
+| Hoppers Crossing Secondary | **28** | **1.4%** | — |
+| Altona College | **28** | **5.2%** | small cohort |
+| Thomas Carr | **26** | **1.7%** | — |
+| The Grange P–12 | **26** | **3.2%** | — |
+| Laverton P–12 | **23** | **0.7%** | — |
+| Tarneit Senior | **23** | **0.5%** | — |
+
+VCE medians for government / Catholic schools that Better Education did not put on its short independent or public league tables are from the same 2025 VCAA sitting as published on School Explorer (median / 40+ / cohort). Treat them as the same results.
+
+**Local takeaway:** among *zoned* government P–9s, **Alamanda (94)** sits well above **Point Cook / Saltwater / Featherbrook (85–86)**, which sit above **Dohertys Creek (82)** and **Carranballac (77)**. Among fee-paying through-to-12 options, **Westbourne** leads the 7–10 rating; **Al-Taqwa** and **ICOM** punch above on VCE 40+ rates.
+
+---
+
 ## Nearby P–9 / 7–12 / P–12 schools (about 5–7 km)
 
-| Approx. km | School | Years | Type | General entry | Competitive extra |
-|---|---|---|---|---|---|
-| 1.6 | **Laverton P–12 College**, 91 Bladin St, Laverton | P–12 | Government | Zone / sibling / closeness. No NAPLAN for a place. | None published as a select-entry stream. |
-| 2.6 | **Emmanuel College – Notre Dame**, 2–40 Foxwood Dr, Point Cook | 7–12 | Catholic, co-ed campus | Siblings, then Catholic baptism / feeder primaries. Reports + NAPLAN uploaded. Year 7 2028 applications close **14 Aug 2026**. | No public academic entrance exam for a standard place. |
-| 2.8 | **Dohertys Creek P–9 College**, 60 Elmhurst Rd, Truganina | P–9 | Government | Zone / sibling / closeness. Often named as a Williams Landing option. | No published select-entry exam for a standard place. |
-| 3.0 | **Al-Taqwa College**, 201 Sayers Rd, Truganina | P–12 | Independent Islamic | Online application, documents (including NAPLAN if held), then a **college placement assessment**. A pass does not guarantee a place. | **SEEP** (Select Entry Enrichment): ICAS assessments; possible scholarship. |
-| 3.2 | **Westbourne Grammar School**, 300 Sayers Rd, Truganina | ELC–12 | Independent, co-ed | Apply early (many families apply in early childhood). Siblings / alumni / staff first. **Placement test for Years 5–12** (EduTest: verbal, numerical, reading, maths, writing). Reports + NAPLAN uploaded. Interview after testing. 2026 Year 7 fee about **$25,776**. | **EduTest scholarships** (e.g. Year 7 / 10 / 11 General Excellence). |
-| 3.4 | **Point Cook Senior Secondary College**, Bergamot Dr, Point Cook | 10–12 | Government | Zone / sibling / closeness. Typical next step after a Point Cook P–9. | No Year 7 exam (school starts at Year 10). |
-| 3.8 | **Carranballac P–9 College** (Jamieson Way campus; also Boardwalk) | P–9 | Government | Zone / sibling / closeness. Local reporting has listed this as one Williams Landing secondary zone. | No published select-entry exam for a standard place. |
-| 4.2 | **Truganina P–9 College**, 55 Clearwood Dr, Truganina | P–9 | Government | Zone / sibling / closeness. Common feeder toward Bemin for Year 10. | No published select-entry exam for a standard place. |
-| 4.4 | **Point Cook P–9 College**, 18–50 Ponsford Dr, Point Cook | P–9 | Government | Zone / sibling / closeness. Proof of address (100-point check). Out-of-zone is tight. | **HAP**: online application + reports, **English & Maths exam**, panel interview, referee check. Extra program fee. 2027 testing was **6 Aug 2026**. Also ADP / CAP niche programs. |
-| 4.9 | **Featherbrook P–9 College**, Boardwalk Blvd, Point Cook | P–9 | Government | Zone / sibling / closeness. | No published select-entry exam for a standard place. |
-| 5.0 | **Thomas Carr College**, 35 Thomas Carr Dr, Tarneit | 7–12 | Catholic, co-ed | Catholic enrolment priorities; contact registrar. Closer Catholic 7–12 for much of Williams Landing / Tarneit. | **Magis** (about 50 students): panel reviews **NAPLAN, PAT, Grade 5 reports** and a **college entry test**. Literacy and/or numeracy acceleration. Reviewed each semester. Sport scholarships exist separately. |
-| 5.2 | **Hoppers Crossing Secondary College**, 2 Fraser St, Hoppers Crossing | 7–12 | Government | Zone / sibling / closeness. A common Williams Landing 7–12 choice when in zone or if there is room. | No statewide exam. Ask the college if any in-house extension class is running. |
-| 5.3 | **Alamanda K–9 College**, Alamanda Blvd, Point Cook | K–9 | Government | Zone / sibling / closeness. | **Everest High Achievers**: optional **EduTest**; offers late in the year. Faster / deeper than mainstream. |
-| 5.5 | **Altona College**, 103A Grieve Pde, Altona | P–12 | Government | Zone / sibling / closeness. Slightly east; out-of-zone from Williams Landing is unlikely if they are full. | None published. |
-| 5.5 | **Saltwater P–9 College**, 15 Kirra Pl (P–6) and 8 Danthonia Ave (7–9), Point Cook | P–9 | Government | **2027 restriction**: in-zone, sibling, or compassionate only. | Some local tutors prepare students for **ACER-style** extension testing used at Saltwater. Confirm with the college what (if anything) is running this year. |
-| 5.7–6.0 | **Bemin Secondary College**, 30 Everton Rd (7–9) and 805 Morris Rd (10–12), Truganina | 7–12 | Government (opened 2024, growing by cohort) | Zone guaranteed. Out-of-zone only if room. Year 10 feeder relationship with Truganina / Dohertys Creek P–9s. | No published academic entrance exam. |
-| 6.0 | **Suzanne Cory High School**, 225 Hoppers Lane, Werribee | 9–12 | Government **selective** | **Not zoned.** Place = exam. About **200** Year 9 places, small Year 10/11 intakes, **no Year 12** intake. | **Year 9: ACER SEHS exam** (statewide, June). **Years 10–11: EduTest** via the school. See section below. |
-| 6.2 | **Yurran P–9 College**, Dunnart Pde / 65 Plover Way, Werribee South | P–9 | Government (opened 2026) | Zone / sibling / closeness. New school; confirm capacity. | None published. |
+| Approx. km | School | Years | Type | BE 7–10 | General entry | Competitive extra |
+|---|---|---|---|---|---|---|
+| 1.6 | **Laverton P–12 College**, 91 Bladin St, Laverton | P–12 | Government | **73** | Zone / sibling / closeness. No NAPLAN for a place. | None published as a select-entry stream. |
+| 2.6 | **Emmanuel College – Notre Dame**, 2–40 Foxwood Dr, Point Cook | 7–12 | Catholic, co-ed campus | — (VCE **28**) | Siblings, then Catholic baptism / feeder primaries. Reports + NAPLAN uploaded. Year 7 2028 applications close **14 Aug 2026**. | No public academic entrance exam for a standard place. |
+| 2.8 | **Dohertys Creek P–9 College**, 60 Elmhurst Rd, Truganina | P–9 | Government | **82** | Zone / sibling / closeness. Often named as a Williams Landing option. | No published select-entry exam for a standard place. |
+| 3.0 | **Al-Taqwa College**, 201 Sayers Rd, Truganina | P–12 | Independent Islamic | **91** (2023) | Online application, documents (including NAPLAN if held), then a **college placement assessment**. A pass does not guarantee a place. | **SEEP** (ICAS). VCE 2025 median **33**. |
+| 3.2 | **Westbourne Grammar School**, 300 Sayers Rd, Truganina | ELC–12 | Independent, co-ed | **98** | Apply early. Siblings / alumni / staff first. **Placement test for Years 5–12** (EduTest). 2026 Year 7 fee about **$25,776**. | **EduTest scholarships** (Year 7 / 10 / 11 General Excellence). |
+| 3.4 | **Point Cook Senior Secondary College**, Bergamot Dr, Point Cook | 10–12 | Government | — (VCE **28**) | Zone / sibling / closeness. Typical next step after a Point Cook P–9. | No Year 7 exam (school starts at Year 10). |
+| 3.8 | **Carranballac P–9 College** (Jamieson Way campus; also Boardwalk) | P–9 | Government | **77** | Zone / sibling / closeness. Local reporting has listed this as one Williams Landing secondary zone. | No published select-entry exam for a standard place. |
+| 4.2 | **Truganina P–9 College**, 55 Clearwood Dr, Truganina | P–9 | Government | **80** | Zone / sibling / closeness. Common feeder toward Bemin for Year 10. | No published select-entry exam for a standard place. |
+| 4.4 | **Point Cook P–9 College**, 18–50 Ponsford Dr, Point Cook | P–9 | Government | **85** | Zone / sibling / closeness. Proof of address (100-point check). Out-of-zone is tight. | **HAP**: English & Maths exam + interview. 2027 testing **6 Aug 2026**. |
+| 4.9 | **Featherbrook P–9 College**, Boardwalk Blvd, Point Cook | P–9 | Government | **86** | Zone / sibling / closeness. | No published select-entry exam for a standard place. |
+| 5.0 | **Thomas Carr College**, 35 Thomas Carr Dr, Tarneit | 7–12 | Catholic, co-ed | **85** | Catholic enrolment priorities. Closer Catholic 7–12 for much of Williams Landing / Tarneit. | **Magis** (~50 students): NAPLAN, PAT, Grade 5 reports and a college test. |
+| 5.2 | **Hoppers Crossing Secondary College**, 2 Fraser St, Hoppers Crossing | 7–12 | Government | **76** | Zone / sibling / closeness. | Ask the college if any in-house extension class is running. |
+| 5.3 | **Alamanda K–9 College**, Alamanda Blvd, Point Cook | K–9 | Government | **94** | Zone / sibling / closeness. | **Everest High Achievers**: optional **EduTest**. |
+| 5.5 | **Altona College**, 103A Grieve Pde, Altona | P–12 | Government | **79** | Zone / sibling / closeness. Out-of-zone from Williams Landing is unlikely if they are full. | None published. |
+| 5.5 | **Saltwater P–9 College**, 15 Kirra Pl (P–6) and 8 Danthonia Ave (7–9), Point Cook | P–9 | Government | **86** | **2027 restriction**: in-zone, sibling, or compassionate only. | Confirm with the college any ACER-style extension testing. |
+| 5.7–6.0 | **Bemin Secondary College**, 30 Everton Rd (7–9) and 805 Morris Rd (10–12), Truganina | 7–12 | Government (opened 2024) | — | Zone guaranteed. Out-of-zone only if room. | No published academic entrance exam. |
+| 6.0 | **Suzanne Cory High School**, 225 Hoppers Lane, Werribee | 9–12 | Government **selective** | **100** | **Not zoned.** Place = exam. ~**200** Year 9 places. **No Year 12** intake. | **Year 9: ACER SEHS exam**. Years 10–11: EduTest. |
+| 6.2 | **Yurran P–9 College**, Dunnart Pde / 65 Plover Way, Werribee South | P–9 | Government (opened 2026) | — | Zone / sibling / closeness. | None published. |
 
 ### Just outside 7 km (still used by Williams Landing families)
 
-| Approx. km | School | Years | Type | Why it still matters |
-|---|---|---|---|---|
-| ~6–7 | **The Grange P–12 College**, Hoppers Crossing | P–12 | Government | Local tutors list a **High Achievers Program** (typically EduTest). Confirm with the college. |
-| ~6–7 | **Heathdale Christian College**, 175 Derrimut Rd, Werribee / Hoppers Crossing | K–12 | Independent Christian | Open enrolment (not “Christians only”). **No scholarships.** Entry is not based on prior achievement. Incoming **Year 7 sit readiness assessments about five months before start** *after* an offer. |
-| ~6–8 | **Islamic College of Melbourne (ICOM)**, Rowes Rd, Tarneit | P–12 | Independent Islamic | **Diagnostic / placement test** for every applicant. **SAP** (Secondary Accelerated Program): EduTest, ~80% average, interview. IB Diploma in Years 11–12 is selective (about 75% Year 10 average). |
-| 7.2 | **Tarneit P–9 College**, 21–23 Brinbrook St | P–9 | Government | Zone / sibling / closeness. |
-| 7.3 | **Tarneit Senior College**, 861 Leakes Rd | 10–12 | Government | Senior pathway after Tarneit P–9. |
-| 7.9 | **Good News Lutheran College**, 580 Tarneit Rd, Tarneit | P–12 | Independent Lutheran | Application + fee. Prep and Year 7 for **2026 and 2027 were closed** at last check. **ACER academic scholarships** for Years 7, 9 and 11 (20–50% tuition, up to two years). |
-| 9.0 | **Werribee Secondary College**, 45 Duncans Rd | 7–12 | Government + IB | Only **accredited Select Entry Learning Program (SELP)** in Wyndham. Must first get a college place via Year 6–7 placement, **then** sit **EduTest** (verbal, numerical, reading, maths) in September. IB pathway in the senior years. |
-| 9.7 | **MacKillop College**, Russell St, Werribee | 7–12 | Catholic | Further Catholic 7–12 if Emmanuel / Thomas Carr do not fit. |
+| Approx. km | School | Years | Type | BE 7–10 | Why it still matters |
+|---|---|---|---|---|---|
+| ~6–7 | **The Grange P–12 College**, Hoppers Crossing | P–12 | Government | **72** | Local tutors list a **High Achievers Program** (typically EduTest). Confirm with the college. |
+| ~6–7 | **Heathdale Christian College**, 175 Derrimut Rd, Werribee / Hoppers Crossing | K–12 | Independent Christian | **95** | Open enrolment. **No scholarships.** Year 7 readiness tasks *after* an offer. VCE median **31**. |
+| ~6–8 | **Islamic College of Melbourne (ICOM)**, Rowes Rd, Tarneit | P–12 | Independent Islamic | **92** | Placement test for every applicant. **SAP**: EduTest. IB in Years 11–12. VCE median **32**, 40+ rate **15.8%**. |
+| 7.2 | **Tarneit P–9 College**, 21–23 Brinbrook St | P–9 | Government | **77** | Zone / sibling / closeness. |
+| 7.3 | **Tarneit Senior College**, 861 Leakes Rd | 10–12 | Government | — (VCE **23**) | Senior pathway after Tarneit P–9. |
+| 7.9 | **Good News Lutheran College**, 580 Tarneit Rd, Tarneit | P–12 | Independent Lutheran | **93** | Prep and Year 7 for **2026 and 2027 were closed** at last check. **ACER scholarships** Years 7, 9, 11. |
+| 9.0 | **Werribee Secondary College**, 45 Duncans Rd | 7–12 | Government + IB | **86** | Only **accredited SELP** in Wyndham, then **EduTest**. IB in the senior years. |
+| 9.7 | **MacKillop College**, Russell St, Werribee | 7–12 | Catholic | **85** | Further Catholic 7–12 if Emmanuel / Thomas Carr do not fit. VCE median **29**. |
 
 Bus **150** (Williams Landing Station – Tarneit Station) stops at Westbourne Grammar and Al-Taqwa on Sayers Road. Bus **494** runs Williams Landing Station toward Alamanda / Featherbrook / Emmanuel.
 
@@ -210,5 +289,7 @@ Compare NAPLAN *profiles* (not entry cut-scores): [myschool.edu.au](https://www.
 - Individual school enrolment pages: Saltwater, Point Cook P–9 (HAP and 2027 niche dates), Carranballac, Alamanda Everest, Bemin, Emmanuel Notre Dame, Thomas Carr Magis, Westbourne Apply, Al-Taqwa admissions, Heathdale FAQ, Good News Tarneit, ICOM enrolment / SAP, Werribee SC SELP.
 - Star Weekly reporting on Williams Landing government zones (Laverton P–12, Carranballac P–9, Dohertys Creek P–9).
 - Distances: Nominatim / OpenStreetMap geocode of 12 Shepherd Street (−37.8625, 144.7549) to each campus, September 2026.
+- Better Education 2025 Years 7–10 State Overall Scores: [Point Cook 3030](https://bettereducation.com.au/hotsuburb/secondary/vic/vic_hot_suburb_rating.aspx?suburb=POINT+COOK%2C3030), [Hoppers Crossing / 3029](https://bettereducation.com.au/hotsuburb/secondary/vic/vic_hot_suburb_rating.aspx?suburb=HOPPERS+CROSSING%2C3029), [Altona](https://bettereducation.com.au/HotSuburb/secondary/vic/vic_hot_suburb_rating.aspx?suburb=ALTONA), [Victorian top secondary 2025](https://bettereducation.com.au/school/Secondary/vic/vic_top_secondary_schools.aspx?yr=2025). Al-Taqwa 7–10 score last on the 2023 top list (91).
+- Better Education VCE 2025: [public](https://bettereducation.com.au/Results/vcePublicSchoolResults.aspx?yr=2025) and [independent](https://bettereducation.com.au/Results/vcePrivateSchoolResults.aspx?yr=2025) tables; Emmanuel trend page (median 28, rank 333). Other 2025 VCE medians/40+ from the same VCAA sitting via School Explorer.
 
 Re-check Find my School and each college’s enrolment page in the year you apply. A new P–9 or a zone redraw can change the “local school” without this file being updated.
