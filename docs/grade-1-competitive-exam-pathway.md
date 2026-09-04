@@ -22,6 +22,46 @@ If you only do Reading Eggs, you mostly get **screen practice and sight-word gam
 
 ---
 
+## Reading Eggs week (one focus a day)
+
+Use this if the app is the spine of the week. **One program per day.** Timer **15 minutes** in the app, then **5–10 minutes with you**. Total ~20–25 minutes, plus a bedtime story.
+
+Login → **Start Learning** → tap **only** the program named for that day. Do not let her roam the games island for the whole session.
+
+If you **do not have Mathseeds**, do Tuesday and Thursday with a ten-frame and counters instead of the app.
+
+| Day | App (15 min) | Focus | After the app — with you (5–10 min) |
+|---|---|---|---|
+| **Monday** | **Fast Phonics** → **Peaks** | **Sounds.** Letter–sound maps, blending. Stay on the current Peak; finish its activities, don’t skip ahead. | Say 4 sounds from today’s Peak. She writes the letters. Blend 3 words on letter tiles (*s-a-t*). |
+| **Tuesday** | **Mathseeds** → **Lessons** | **Number.** Counting, ten-frames, “how many.” One lesson only. | Show the same number with counters. “How do you see it? Make 10.” |
+| **Wednesday** | **Reading Eggs** → **Lessons** (the map) | **Words.** Blend to read the lesson book. Do the end-of-lesson book, not only the games. | She re-reads that book (or a SPELD SA / school decodable) **out loud** to you, finger under each word. |
+| **Thursday** | **Mathseeds** → **Lessons** (next lesson) | **Adding / taking away.** Number lines, “how many left.” | 4 spoken problems: “You had 10, I ate 3. How many? How do you know?” No counting from 1 if she can use 10. |
+| **Friday** | **Library** (or the lesson **book quiz**) | **Meaning.** Pick one short book at her level. Read it. Do the quiz. | 2 questions: “What happened? Why did they…?” This is verbal reasoning. |
+| **Saturday** | **Reading Eggs** → **Spelling** (or Driving Tests if spelling is not on the account) | **Write the sounds.** One list / one test. | You dictate 4 words from the week. She writes. Tick each *sound*, not just the whole word. |
+| **Sunday** | **Off the app** (or 10 min **Play** only if she asks) | **Rest + story.** | You read a real picture book / chapter for 15–20 min. Ask “What might happen next?” |
+
+**Every night (including app days):** you still read *to* her. That is the vocabulary engine for later verbal reasoning.
+
+### What “done” looks like each day
+
+- **Monday:** she can say the new sound without the picture clue.
+- **Tuesday:** she can show today’s number on a ten-frame without counting every dot.
+- **Wednesday:** she can read the lesson book to you, blending stuck words (no guessing from the picture).
+- **Thursday:** she can explain one add/take-away with “I know because…”
+- **Friday:** she can retell the library book in two sentences.
+- **Saturday:** she can write 4 words using sounds, not copying.
+- **Sunday:** she enjoyed the story. That counts.
+
+### Rules so the week works
+
+- Same time each weekday (after snack is fine).
+- If she finishes the 15-minute lesson early, **stop**. Do not open a second program.
+- If she is stuck on a Fast Phonics Peak for more than a week, stay there. Do not jump Peaks to earn eggs.
+- **Mathseeds placement test** once, then follow the lessons in order.
+- Friday Library: choose books she can decode, not the hardest cover.
+
+---
+
 ## Reading Eggs — keep it, demote it
 
 Use it as the **fun last 10 minutes**, after you have already taught.
