@@ -133,11 +133,11 @@
       <h2>Food orders</h2>
       <span class="pill" id="orders-profit-pill">&mdash;</span>
     </div>
-    <p class="muted">Create an order, record money received, then add every cost for that order. Profit is income minus costs. A slice of income is set aside for annual rates, ABN and registration &mdash; that is a reserve, not an order cost.</p>
+    <p class="muted">Create an order, record money received, then add every cost for that order. Profit is income minus costs. Set aside a slice of income for annual rates, ABN and registration, and 32% of profit for income tax &mdash; those are reserves, not order costs.</p>
 
     <div class="reserve-card" id="overhead-card">
       <div>
-        <h3>Annual rates, ABN &amp; registration</h3>
+        <h3>Rates, ABN, registration &amp; income tax</h3>
         <p class="muted" id="overhead-summary"></p>
       </div>
       <div class="reserve-progress">
@@ -146,12 +146,16 @@
       </div>
       <form id="overhead-form" class="create-order reserve-form" autocomplete="off">
         <label class="field">
-          <span>Annual amount</span>
+          <span>Annual rates / ABN / registration</span>
           <input type="text" inputmode="decimal" id="overhead-annual" required>
         </label>
         <label class="field">
           <span>Expected orders / month</span>
           <input type="text" inputmode="decimal" id="overhead-monthly" required>
+        </label>
+        <label class="field">
+          <span>Income tax % of profit</span>
+          <input type="text" inputmode="decimal" id="overhead-tax" required>
         </label>
         <button type="submit" class="button ghost">Update reserve</button>
       </form>

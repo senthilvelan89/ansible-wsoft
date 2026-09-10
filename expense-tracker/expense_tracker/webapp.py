@@ -254,9 +254,12 @@ def build_handler(database: Database):
                     monthly = payload.get(
                         "monthly_order_income", payload.get("expected_monthly_income")
                     )
-                    if annual is None and monthly is None:
-                        raise ApiError("Provide annual_overhead and/or monthly_order_income")
-                    database.set_overhead_amounts(annual=annual, monthly=monthly)
+                    tax = payload.get("income_tax_percent", payload.get("tax_percent"))
+                    if annual is None and monthly is None and tax is None:
+                        raise ApiError(
+                            "Provide annual_overhead, monthly_order_income and/or income_tax_percent"
+                        )
+                    database.set_overhead_amounts(annual=annual, monthly=monthly, tax_percent=tax)
                     return self._send_json(database.overhead_snapshot(symbol))
                 raise ApiError("Method not allowed", HTTPStatus.METHOD_NOT_ALLOWED)
 
@@ -423,7 +426,9 @@ def _order_list_payload(database: Database, orders, symbol: str) -> Dict[str, An
     cost = sum(order.expense_cents for order in orders)
     hours = sum(order.hours for order in orders)
     reserve = sum(order.overhead_reserve_cents for order in orders)
+    tax = sum(order.tax_reserve_cents for order in orders)
     after = income - cost - reserve
+    keep = income - cost - reserve - tax
     return {
         "orders": [order.to_dict(symbol) for order in orders],
         "income_cents": income,
@@ -436,6 +441,10 @@ def _order_list_payload(database: Database, orders, symbol: str) -> Dict[str, An
         "overhead_reserve_display": format_amount(reserve, symbol),
         "profit_after_reserve_cents": after,
         "profit_after_reserve_display": format_amount(after, symbol),
+        "tax_reserve_cents": tax,
+        "tax_reserve_display": format_amount(tax, symbol),
+        "keep_cents": keep,
+        "keep_display": format_amount(keep, symbol),
         "hours": hours,
         "overhead": database.overhead_snapshot(symbol),
     }

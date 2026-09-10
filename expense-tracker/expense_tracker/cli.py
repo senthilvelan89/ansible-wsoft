@@ -201,6 +201,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--monthly-order-income",
         help="expected food-order income per month, used to size the monthly reserve (default: 1200)",
     )
+    config.add_argument(
+        "--income-tax-percent",
+        help="percent of food-order profit to set aside for income tax (default: 32)",
+    )
     config.set_defaults(handler=command_config)
 
     return parser
@@ -470,13 +474,16 @@ def command_orders(args, database: Database) -> int:
 
     if action == "show":
         order = database.get_food_order(args.id)
+        overhead = database.overhead_snapshot(symbol)
         print(render_orders([order], symbol, title=order.name))
         print(
-            "Set aside for %s: %s. Profit after reserve: %s"
+            "Set aside %s for %s and %s for income tax (%s). Keep %s"
             % (
-                database.overhead_snapshot(symbol)["label"],
                 format_amount(order.overhead_reserve_cents, symbol),
-                format_amount(order.profit_after_reserve_cents, symbol),
+                overhead["label"],
+                format_amount(order.tax_reserve_cents, symbol),
+                overhead["tax_percent_display"],
+                format_amount(order.keep_cents, symbol),
             )
         )
         if order.entries:
@@ -508,12 +515,13 @@ def command_orders(args, database: Database) -> int:
         )
         order = database.get_food_order(args.id, with_entries=False)
         print(
-            "Recorded income %s. Order profit is now %s; set aside %s (after reserve %s)"
+            "Recorded income %s. Profit %s; rates %s; tax %s; keep %s"
             % (
                 format_amount(entry.amount_cents, symbol),
                 format_amount(order.profit_cents, symbol),
                 format_amount(order.overhead_reserve_cents, symbol),
-                format_amount(order.profit_after_reserve_cents, symbol),
+                format_amount(order.tax_reserve_cents, symbol),
+                format_amount(order.keep_cents, symbol),
             )
         )
         return 0
@@ -554,12 +562,13 @@ def command_orders(args, database: Database) -> int:
     print()
     print(overhead["summary"])
     print(
-        "%s reserved so far: %s of %s (%s still to fund)."
+        "%s reserved so far: rates/ABN %s of %s (%s still to fund); income tax %s."
         % (
             overhead["year"],
             overhead["ytd_reserved_display"],
             overhead["annual_display"],
             overhead["remaining_display"],
+            overhead["ytd_tax_display"],
         )
     )
     return 0
@@ -654,6 +663,9 @@ def command_config(args, database: Database) -> int:
     if getattr(args, "monthly_order_income", None):
         database.set_overhead_amounts(monthly=args.monthly_order_income)
         changed = True
+    if getattr(args, "income_tax_percent", None):
+        database.set_overhead_amounts(tax_percent=args.income_tax_percent)
+        changed = True
 
     span = database.date_span()
     totals = database.totals()
@@ -677,6 +689,8 @@ def command_config(args, database: Database) -> int:
             overhead["annual_display"],
             overhead["remaining_display"],
         )],
+        ["income tax", "%s of profit" % overhead["tax_percent_display"]],
+        ["tax reserved this year", overhead["ytd_tax_display"]],
         ["expenses", "%d recorded, total %s" % (
             totals.count,
             format_amount(totals.total_cents, database.currency_symbol),

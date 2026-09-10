@@ -113,7 +113,8 @@ function renderOverhead(overhead) {
   if ($("overhead-summary")) $("overhead-summary").textContent = overhead.summary;
   if ($("overhead-progress")) {
     $("overhead-progress").textContent =
-      `${overhead.year}: ${overhead.ytd_reserved_display} of ${overhead.annual_display} set aside (${overhead.remaining_display} still to fund)`;
+      `${overhead.year}: ${overhead.ytd_reserved_display} of ${overhead.annual_display} for rates/ABN (${overhead.remaining_display} still to fund). ` +
+      `Income tax set aside: ${overhead.ytd_tax_display} (${overhead.tax_percent_display} of profit).`;
   }
   const bar = $("overhead-bar");
   if (bar) {
@@ -122,12 +123,17 @@ function renderOverhead(overhead) {
   }
   const annual = $("overhead-annual");
   const monthly = $("overhead-monthly");
+  const tax = $("overhead-tax");
   if (annual && document.activeElement !== annual) annual.value = dollarsInput(overhead.annual_cents);
   if (monthly && document.activeElement !== monthly) monthly.value = dollarsInput(overhead.expected_monthly_income_cents);
+  if (tax && document.activeElement !== tax) {
+    const rate = overhead.tax_percent;
+    tax.value = Number.isInteger(rate) ? String(rate) : String(rate);
+  }
   if ($("order-overhead-note")) {
     $("order-overhead-note").textContent =
-      `Set aside is ${overhead.rate_display} of income toward ${overhead.label}. ` +
-      `${overhead.year} reserved so far: ${overhead.ytd_reserved_display} of ${overhead.annual_display}.`;
+      `${overhead.rate_display} of income toward ${overhead.label}; ${overhead.tax_percent_display} of profit toward ${overhead.tax_label}. ` +
+      `${overhead.year} so far: rates/ABN ${overhead.ytd_reserved_display} of ${overhead.annual_display}, tax ${overhead.ytd_tax_display}.`;
   }
 }
 
@@ -443,7 +449,7 @@ function fillOrderCategories(selected) {
 
 async function loadOrderList() {
   const data = await api("/api/food-orders");
-  $("orders-profit-pill").textContent = `After reserve ${data.profit_after_reserve_display}`;
+  $("orders-profit-pill").textContent = `Keep ${data.keep_display}`;
   renderOverhead(data.overhead);
   if (!data.orders.length) {
     $("orders-list").replaceChildren(empty("No food orders yet. Create one above."));
@@ -457,8 +463,9 @@ async function loadOrderList() {
       { label: "Income", amount: true, value: (row) => row.income_display },
       { label: "Expenses", amount: true, value: (row) => row.expense_display },
       { label: "Profit", amount: true, value: (row) => row.profit_display, className: (row) => profitClass(row.profit_cents) },
-      { label: "Set aside", amount: true, value: (row) => row.overhead_reserve_display },
-      { label: "After reserve", amount: true, value: (row) => row.profit_after_reserve_display, className: (row) => profitClass(row.profit_after_reserve_cents) },
+      { label: "Rates", amount: true, value: (row) => row.overhead_reserve_display },
+      { label: "Tax", amount: true, value: (row) => row.tax_reserve_display },
+      { label: "Keep", amount: true, value: (row) => row.keep_display, className: (row) => profitClass(row.keep_cents) },
       { label: "Hours", amount: true, value: (row) => row.hours_display },
     ],
     {
@@ -491,7 +498,7 @@ async function loadOrderDetail(orderId) {
   fillOrderCategories($("cost-category").value);
   $("order-title").textContent = order.name;
   $("order-meta").textContent = `${order.date}${order.note ? " · " + order.note : ""}`;
-  $("order-profit-pill").textContent = `After reserve ${order.profit_after_reserve_display}`;
+  $("order-profit-pill").textContent = `Keep ${order.keep_display}`;
   $("order-profit-pill").className = `pill`;
   renderOverhead(order.overhead);
   $("order-stats").replaceChildren(
@@ -499,8 +506,9 @@ async function loadOrderDetail(orderId) {
       ["Income", order.income_display, ""],
       ["Expenses", order.expense_display, ""],
       ["Profit", order.profit_display, profitClass(order.profit_cents)],
-      ["Set aside", order.overhead_reserve_display, ""],
-      ["After reserve", order.profit_after_reserve_display, profitClass(order.profit_after_reserve_cents)],
+      ["Rates / ABN", order.overhead_reserve_display, ""],
+      ["Income tax", order.tax_reserve_display, ""],
+      ["Keep", order.keep_display, profitClass(order.keep_cents)],
       ["Labour hours", order.hours_display, ""],
     ].map(([label, value, extra]) =>
       el("div", { class: "stat-card" }, [
@@ -556,6 +564,7 @@ function wireOrderPages() {
           body: JSON.stringify({
             annual_overhead: $("overhead-annual").value.trim(),
             monthly_order_income: $("overhead-monthly").value.trim(),
+            income_tax_percent: $("overhead-tax").value.trim(),
           }),
         });
         renderOverhead(overhead);
@@ -664,11 +673,11 @@ if (page === "expenses") {
     .then(() => fieldItem.focus())
     .catch((error) => toast(error.message, true));
 } else if (page === "orders") {
-  $("retention-note").textContent = "Income minus costs, with a reserve for rates, ABN and registration";
+  $("retention-note").textContent = "Income minus costs, with reserves for rates, ABN, registration and income tax";
   wireOrderPages();
   loadOrderList().catch((error) => toast(error.message, true));
 } else {
-  $("retention-note").textContent = "Income, costs, labour hours, profit and the rates/ABN reserve for this order";
+  $("retention-note").textContent = "Income, costs, labour hours, profit, rates reserve and income tax for this order";
   wireOrderPages();
   loadOrderDetail(Number(orderMatch[1])).catch((error) => toast(error.message, true));
 }

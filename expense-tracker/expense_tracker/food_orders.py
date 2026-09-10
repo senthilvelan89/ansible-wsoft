@@ -4,7 +4,8 @@ This is a separate ledger from personal expenses. Each order has money
 received (income), costs under order-specific categories, and optional
 labour hours. Profit is income minus costs. A configurable share of
 income is set aside for annual council rates, ABN and business
-registration so that money is reserved without distorting order costing.
+registration, and 32% of profit is set aside for income tax, so that
+money is reserved without distorting order costing.
 """
 
 from __future__ import annotations
@@ -44,7 +45,9 @@ DEFAULT_ORDER_CATEGORIES = (
 # aside a slice of each order's income instead of booking a fake cost line.
 DEFAULT_ANNUAL_OVERHEAD_CENTS = 120000  # $1,200
 DEFAULT_MONTHLY_ORDER_INCOME_CENTS = 120000  # assumed $1,200 of orders / month
+DEFAULT_INCOME_TAX_PERCENT = 32.0
 OVERHEAD_LABEL = "council rates, ABN and business registration"
+TAX_LABEL = "income tax"
 
 _CATEGORY_ALIASES = {
     "groceries": "Grocery",
@@ -104,6 +107,7 @@ class FoodOrder:
     income_count: int = 0
     expense_count: int = 0
     overhead_reserve_cents: int = 0
+    tax_reserve_cents: int = 0
     created_at: str = ""
     updated_at: str = ""
     entries: Optional[List[OrderEntry]] = None
@@ -117,9 +121,14 @@ class FoodOrder:
     def profit_after_reserve_cents(self) -> int:
         return self.profit_cents - self.overhead_reserve_cents
 
+    @property
+    def keep_cents(self) -> int:
+        return self.profit_cents - self.overhead_reserve_cents - self.tax_reserve_cents
+
     def to_dict(self, symbol: str = "$") -> Dict[str, object]:
         profit = self.profit_cents
         after_reserve = self.profit_after_reserve_cents
+        keep = self.keep_cents
         payload = {
             "id": self.id,
             "name": self.name,
@@ -135,6 +144,10 @@ class FoodOrder:
             "overhead_reserve_display": format_amount(self.overhead_reserve_cents, symbol),
             "profit_after_reserve_cents": after_reserve,
             "profit_after_reserve_display": format_amount(after_reserve, symbol),
+            "tax_reserve_cents": self.tax_reserve_cents,
+            "tax_reserve_display": format_amount(self.tax_reserve_cents, symbol),
+            "keep_cents": keep,
+            "keep_display": format_amount(keep, symbol),
             "hours": self.hours,
             "hours_display": format_hours(self.hours),
             "income_count": self.income_count,
@@ -213,7 +226,7 @@ class FoodOrderMixin:
             monthly = DEFAULT_MONTHLY_ORDER_INCOME_CENTS
         return annual, monthly
 
-    def set_overhead_amounts(self, annual=None, monthly=None) -> None:
+    def set_overhead_amounts(self, annual=None, monthly=None, tax_percent=None) -> None:
         if annual is not None:
             cents = parse_amount(annual)
             if cents < 0:
@@ -224,23 +237,39 @@ class FoodOrderMixin:
             if cents <= 0:
                 raise ParseError("Expected monthly order income must be greater than zero")
             self.set_setting("expected_monthly_order_income_cents", str(cents))
+        if tax_percent is not None:
+            self.set_setting("income_tax_percent", _format_percent_value(parse_percent(tax_percent)))
+
+    def income_tax_percent(self) -> float:
+        raw = self.get_setting("income_tax_percent")
+        if raw is None or raw == "":
+            return DEFAULT_INCOME_TAX_PERCENT
+        try:
+            value = float(raw)
+        except (TypeError, ValueError):
+            return DEFAULT_INCOME_TAX_PERCENT
+        if value < 0 or value > 100:
+            return DEFAULT_INCOME_TAX_PERCENT
+        return value
 
     def overhead_snapshot(self, symbol: str = "$", year: Optional[int] = None) -> Dict[str, object]:
         year = year or today().year
         annual, monthly = self.overhead_amounts()
+        tax_percent = self.income_tax_percent()
         monthly_reserve = int(round(annual / 12.0)) if annual else 0
         rate = (annual / 12.0 / monthly) if monthly else 0.0
         start = dt.date(year, 1, 1)
         end = dt.date(year, 12, 31)
-        ytd = sum(
-            order.overhead_reserve_cents
-            for order in self.list_food_orders(start=start, end=end)
-        )
+        year_orders = self.list_food_orders(start=start, end=end)
+        ytd = sum(order.overhead_reserve_cents for order in year_orders)
+        ytd_tax = sum(order.tax_reserve_cents for order in year_orders)
         remaining = max(0, annual - ytd)
         progress = min(1.0, ytd / annual) if annual else 1.0
         rate_display = "%.2f%%" % (rate * 100)
+        tax_display = format_percent(tax_percent)
         return {
             "label": OVERHEAD_LABEL,
+            "tax_label": TAX_LABEL,
             "year": year,
             "annual_cents": annual,
             "annual_display": format_amount(annual, symbol),
@@ -250,32 +279,41 @@ class FoodOrderMixin:
             "monthly_reserve_display": format_amount(monthly_reserve, symbol),
             "rate": rate,
             "rate_display": rate_display,
+            "tax_percent": tax_percent,
+            "tax_percent_display": tax_display,
             "ytd_reserved_cents": ytd,
             "ytd_reserved_display": format_amount(ytd, symbol),
+            "ytd_tax_cents": ytd_tax,
+            "ytd_tax_display": format_amount(ytd_tax, symbol),
             "remaining_cents": remaining,
             "remaining_display": format_amount(remaining, symbol),
             "progress": progress,
             "summary": (
                 "You pay %s a year for %s. With %s of orders each month, "
-                "set aside %s per month (%s of income) so the year is covered."
+                "set aside %s per month (%s of income) so the year is covered. "
+                "Also set aside %s of profit for %s."
                 % (
                     format_amount(annual, symbol),
                     OVERHEAD_LABEL,
                     format_amount(monthly, symbol),
                     format_amount(monthly_reserve, symbol),
                     rate_display,
+                    tax_display,
+                    TAX_LABEL,
                 )
             ),
         }
 
     def _with_reserves(self, orders: List[FoodOrder]) -> List[FoodOrder]:
         annual, monthly = self.overhead_amounts()
+        tax_percent = self.income_tax_percent()
         return [
             replace(
                 order,
                 overhead_reserve_cents=overhead_reserve_cents(
                     order.income_cents, annual, monthly
                 ),
+                tax_reserve_cents=tax_reserve_cents(order.profit_cents, tax_percent),
             )
             for order in orders
         ]
@@ -453,6 +491,7 @@ class FoodOrderMixin:
             income_count=order.income_count,
             expense_count=order.expense_count,
             overhead_reserve_cents=order.overhead_reserve_cents,
+            tax_reserve_cents=order.tax_reserve_cents,
             created_at=order.created_at,
             updated_at=order.updated_at,
             entries=entries,
@@ -646,6 +685,40 @@ def overhead_reserve_cents(income_cents: int, annual_cents: int, monthly_income_
     if income_cents <= 0 or annual_cents <= 0 or monthly_income_cents <= 0:
         return 0
     return int(round(income_cents * annual_cents / (12.0 * monthly_income_cents)))
+
+
+def tax_reserve_cents(profit_cents: int, tax_percent: float) -> int:
+    """Share of this order's profit to set aside for income tax."""
+
+    if profit_cents <= 0 or tax_percent <= 0:
+        return 0
+    return int(round(profit_cents * float(tax_percent) / 100.0))
+
+
+def parse_percent(value) -> float:
+    text = str(value).strip().rstrip("%").strip()
+    if not text:
+        raise ParseError("Income tax percent is required, for example 32")
+    try:
+        rate = float(text)
+    except ValueError:
+        raise ParseError("Could not read a percent from %r" % value) from None
+    if rate < 0 or rate > 100:
+        raise ParseError("Income tax percent must be between 0 and 100")
+    return rate
+
+
+def format_percent(rate: float) -> str:
+    if abs(rate - round(rate)) < 1e-9:
+        return "%d%%" % int(round(rate))
+    text = ("%.2f" % rate).rstrip("0").rstrip(".")
+    return text + "%"
+
+
+def _format_percent_value(rate: float) -> str:
+    if abs(rate - round(rate)) < 1e-9:
+        return str(int(round(rate)))
+    return ("%.4f" % rate).rstrip("0").rstrip(".")
 
 
 def _meta_cents(raw, default: int) -> int:
