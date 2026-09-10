@@ -98,6 +98,11 @@ function isLabourCategory(name) {
   return (name || "").trim().toLowerCase() === "labour";
 }
 
+
+function profitClass(cents) {
+  return cents >= 0 ? "profit-positive" : "profit-negative";
+}
+
 function dollarsInput(cents) {
   const value = (cents || 0) / 100;
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
