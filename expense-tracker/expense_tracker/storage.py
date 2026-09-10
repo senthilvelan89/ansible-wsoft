@@ -221,13 +221,19 @@ class Database:
                     ON expenses (spent_on);
                 CREATE INDEX IF NOT EXISTS idx_expenses_category
                     ON expenses (category);
-                CREATE INDEX IF NOT EXISTS idx_expenses_order
-                    ON expenses (order_name);
                 """
             )
             self._migrate(connection)
 
     def _migrate(self, connection: sqlite3.Connection) -> None:
+        """Upgrade an existing database in place.
+
+        CREATE TABLE IF NOT EXISTS leaves an older expenses table untouched, so
+        the order_name column and its index are added here rather than in the
+        bootstrap script. Creating that index first is what produced
+        "no such column: order_name" on existing files.
+        """
+
         columns = {
             row[1] for row in connection.execute("PRAGMA table_info(expenses)").fetchall()
         }
@@ -235,9 +241,9 @@ class Database:
             connection.execute(
                 "ALTER TABLE expenses ADD COLUMN order_name TEXT NOT NULL DEFAULT ''"
             )
-            connection.execute(
-                "CREATE INDEX IF NOT EXISTS idx_expenses_order ON expenses (order_name)"
-            )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_expenses_order ON expenses (order_name)"
+        )
 
         stamp = _timestamp()
         existing = connection.execute(
