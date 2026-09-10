@@ -14,6 +14,53 @@ the Python 3 that ships with macOS.
 
 ---
 
+## Checkout and run on your Mac
+
+The planner is on branch `cursor/add-task-planner-1e93` (pull request #5). It is
+not on `main` yet.
+
+**If you do not have the repo yet:**
+
+```bash
+cd ~
+git clone https://github.com/senthilvelan89/ansible-wsoft.git
+cd ansible-wsoft
+git fetch origin cursor/add-task-planner-1e93
+git checkout cursor/add-task-planner-1e93
+```
+
+**If you already cloned the repo:**
+
+```bash
+cd ~/ansible-wsoft          # or wherever you cloned it
+git fetch origin cursor/add-task-planner-1e93
+git checkout cursor/add-task-planner-1e93
+```
+
+Then start it:
+
+```bash
+cd task-planner
+chmod +x tasks              # only needed once
+./tasks                     # next step in each category, in Terminal
+./tasks web                 # browser UI at http://127.0.0.1:8766
+```
+
+Leave that Terminal window open. Press `Ctrl+C` to stop the web server.
+
+If macOS says Python is missing, install the Apple developer command line tools
+with `xcode-select --install`, which includes Python 3.
+
+This planner uses **port 8766**. The expense tracker uses **port 8765**, so both
+can run at the same time. The expense tracker lives on a different branch
+(`cursor/add-expense-tracker-tool-93de`); keep that clone in another folder if
+you want both apps at once.
+
+Your data is stored in `~/.task-planner/tasks.db` on this Mac. Nothing is sent
+anywhere.
+
+---
+
 ## Getting started
 
 Open Terminal and go to this folder:
