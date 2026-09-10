@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import List, Optional, Sequence
 
-from .parsing import format_amount, format_date
-from .storage import Bucket, Expense, OrderProfit
+from .parsing import format_amount, format_date, format_hours
+from .storage import Bucket, Expense
 
 BAR_CHARACTER = "\u2588"
 
@@ -115,37 +115,45 @@ def render_summary(
     return "\n".join(parts)
 
 
-def render_orders(orders: Sequence[OrderProfit], symbol: str = "$", title: str = "") -> str:
+def render_orders(orders, symbol: str = "$", title: str = "") -> str:
     if not orders:
         return "%sNo food orders recorded for this range." % (title + "\n" if title else "")
 
     rows: List[List[str]] = []
     for order in orders:
+        date_value = getattr(order, "order_date", None) or getattr(order, "last_date", None)
         rows.append(
             [
-                order.name,
-                format_date(order.last_date) if order.last_date else "",
+                "%s (#%s)" % (order.name, order.id) if getattr(order, "id", None) else order.name,
+                format_date(date_value) if date_value else "",
                 format_amount(order.income_cents, symbol),
                 format_amount(order.expense_cents, symbol),
                 format_amount(order.profit_cents, symbol),
-                str(order.income_count + order.expense_count),
+                format_hours(getattr(order, "hours", 0)),
             ]
         )
 
     table = render_table(
-        ["ORDER", "LAST DATE", "INCOME", "EXPENSES", "PROFIT", "ENTRIES"],
+        ["ORDER", "DATE", "INCOME", "EXPENSES", "PROFIT", "HOURS"],
         rows,
         ["left", "left", "right", "right", "right", "right"],
     )
     income = sum(order.income_cents for order in orders)
     cost = sum(order.expense_cents for order in orders)
+    hours = sum(getattr(order, "hours", 0) for order in orders)
     parts = []
     if title:
         parts.append(title)
     parts.append(table)
     parts.append("")
     parts.append(
-        "%d order(s): income %s, expenses %s, profit %s"
-        % (len(orders), format_amount(income, symbol), format_amount(cost, symbol), format_amount(income - cost, symbol))
+        "%d order(s): income %s, expenses %s, profit %s, labour %s hours"
+        % (
+            len(orders),
+            format_amount(income, symbol),
+            format_amount(cost, symbol),
+            format_amount(income - cost, symbol),
+            format_hours(hours),
+        )
     )
     return "\n".join(parts)

@@ -117,7 +117,9 @@ def build_handler(database: Database):
                 if method != "GET" and self.headers.get(GUARD_HEADER) is None:
                     raise ApiError("Missing %s header" % GUARD_HEADER, HTTPStatus.FORBIDDEN)
 
-                if method == "GET" and path in {"/", "/index.html"}:
+                if method == "GET" and (
+                    path in {"/", "/index.html", "/orders"} or path.startswith("/orders/")
+                ):
                     return self._serve_page()
                 if method == "GET" and path == "/app.js":
                     return self._serve_static("app.js", "application/javascript; charset=utf-8")
@@ -170,7 +172,6 @@ def build_handler(database: Database):
                         category=payload.get("category") or "Other",
                         spent_on=payload.get("date") or None,
                         note=payload.get("note", ""),
-                        order_name=payload.get("order_name") or payload.get("order") or "",
                     )
                     return self._send_json({"expense": expense.to_dict(symbol)}, HTTPStatus.CREATED)
                 raise ApiError("Method not allowed", HTTPStatus.METHOD_NOT_ALLOWED)
@@ -193,7 +194,6 @@ def build_handler(database: Database):
                         category=payload.get("category"),
                         spent_on=payload.get("date"),
                         note=payload.get("note"),
-                        order_name=payload["order_name"] if "order_name" in payload else payload.get("order"),
                     )
                     return self._send_json({"expense": expense.to_dict(symbol)})
                 raise ApiError("Method not allowed", HTTPStatus.METHOD_NOT_ALLOWED)
@@ -233,14 +233,55 @@ def build_handler(database: Database):
                     )
                 raise ApiError("Method not allowed", HTTPStatus.METHOD_NOT_ALLOWED)
 
+            if path == "/api/order-categories":
+                if method == "GET":
+                    return self._send_json({"categories": database.order_categories()})
+                if method == "POST":
+                    payload = self._read_json()
+                    name = database.add_order_category(payload.get("name", ""))
+                    return self._send_json(
+                        {"category": name, "categories": database.order_categories()},
+                        HTTPStatus.CREATED,
+                    )
+                raise ApiError("Method not allowed", HTTPStatus.METHOD_NOT_ALLOWED)
+
+            if path == "/api/food-orders":
+                if method == "GET":
+                    start, end = _range_from_query(query)
+                    orders = database.list_food_orders(
+                        start=start, end=end, search=_first(query, "search")
+                    )
+                    income = sum(order.income_cents for order in orders)
+                    cost = sum(order.expense_cents for order in orders)
+                    hours = sum(order.hours for order in orders)
+                    return self._send_json(
+                        {
+                            "orders": [order.to_dict(symbol) for order in orders],
+                            "income_cents": income,
+                            "income_display": format_amount(income, symbol),
+                            "expense_cents": cost,
+                            "expense_display": format_amount(cost, symbol),
+                            "profit_cents": income - cost,
+                            "profit_display": format_amount(income - cost, symbol),
+                            "hours": hours,
+                        }
+                    )
+                if method == "POST":
+                    payload = self._read_json()
+                    order = database.create_food_order(
+                        payload.get("name", ""),
+                        order_date=payload.get("date") or None,
+                        note=payload.get("note", ""),
+                    )
+                    return self._send_json({"order": order.to_dict(symbol)}, HTTPStatus.CREATED)
+                raise ApiError("Method not allowed", HTTPStatus.METHOD_NOT_ALLOWED)
+
+            if path.startswith("/api/food-orders/"):
+                return self._food_order_api(method, path, symbol)
+
             if path == "/api/orders" and method == "GET":
                 start, end = _range_from_query(query)
-                orders = database.order_profits(
-                    start=start,
-                    end=end,
-                    order_name=_first(query, "order"),
-                    search=_first(query, "search"),
-                )
+                orders = database.list_food_orders(start=start, end=end)
                 income = sum(order.income_cents for order in orders)
                 cost = sum(order.expense_cents for order in orders)
                 return self._send_json(
@@ -254,6 +295,79 @@ def build_handler(database: Database):
                         "profit_display": format_amount(income - cost, symbol),
                     }
                 )
+
+            raise ApiError("Not found", HTTPStatus.NOT_FOUND)
+
+        def _food_order_api(self, method: str, path: str, symbol: str) -> None:
+            parts = [part for part in path.split("/") if part]
+            # api, food-orders, id, [entries, entry-id]
+            try:
+                order_id = int(parts[2])
+            except (IndexError, ValueError):
+                raise ApiError("Invalid food order id") from None
+
+            if len(parts) == 3:
+                if method == "GET":
+                    order = database.get_food_order(order_id)
+                    payload = order.to_dict(symbol)
+                    payload["categories"] = database.order_categories()
+                    return self._send_json(payload)
+                if method == "PATCH":
+                    payload = self._read_json()
+                    order = database.update_food_order(
+                        order_id,
+                        name=payload.get("name"),
+                        order_date=payload.get("date"),
+                        note=payload.get("note"),
+                    )
+                    return self._send_json({"order": order.to_dict(symbol)})
+                if method == "DELETE":
+                    if not database.delete_food_order(order_id):
+                        raise ApiError("No food order with id %d" % order_id, HTTPStatus.NOT_FOUND)
+                    return self._send_json({"deleted": order_id})
+                raise ApiError("Method not allowed", HTTPStatus.METHOD_NOT_ALLOWED)
+
+            if len(parts) >= 4 and parts[3] == "entries":
+                if len(parts) == 4 and method == "POST":
+                    payload = self._read_json()
+                    entry = database.add_order_entry(
+                        order_id,
+                        kind=payload.get("kind") or "cost",
+                        item=payload.get("item", ""),
+                        amount=payload.get("amount", ""),
+                        category=payload.get("category") or "",
+                        hours=payload.get("hours") or 0,
+                        spent_on=payload.get("date") or None,
+                        note=payload.get("note", ""),
+                    )
+                    order = database.get_food_order(order_id)
+                    return self._send_json(
+                        {"entry": entry.to_dict(symbol), "order": order.to_dict(symbol)},
+                        HTTPStatus.CREATED,
+                    )
+                if len(parts) == 5:
+                    try:
+                        entry_id = int(parts[4])
+                    except ValueError:
+                        raise ApiError("Invalid entry id") from None
+                    if method == "DELETE":
+                        if not database.delete_order_entry(entry_id):
+                            raise ApiError("No order entry with id %d" % entry_id, HTTPStatus.NOT_FOUND)
+                        return self._send_json({"deleted": entry_id})
+                    if method == "PATCH":
+                        payload = self._read_json()
+                        entry = database.update_order_entry(
+                            entry_id,
+                            item=payload.get("item"),
+                            amount=payload.get("amount"),
+                            category=payload.get("category"),
+                            hours=payload.get("hours"),
+                            spent_on=payload.get("date"),
+                            note=payload.get("note"),
+                            kind=payload.get("kind"),
+                        )
+                        return self._send_json({"entry": entry.to_dict(symbol)})
+                raise ApiError("Method not allowed", HTTPStatus.METHOD_NOT_ALLOWED)
 
             raise ApiError("Not found", HTTPStatus.NOT_FOUND)
 

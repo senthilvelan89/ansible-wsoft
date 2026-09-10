@@ -77,7 +77,34 @@ def format_amount(cents: int, symbol: str = "$") -> str:
     return "-" + text if negative else text
 
 
-def amount_to_decimal(cents: int) -> Decimal:
+def format_hours(hours) -> str:
+    value = float(hours or 0)
+    if abs(value - round(value)) < 1e-9:
+        return str(int(round(value)))
+    text = ("%.2f" % value).rstrip("0").rstrip(".")
+    return text
+
+
+def parse_hours(value) -> float:
+    """Parse a labour-hours figure. Blank means zero."""
+
+    if value is None:
+        return 0.0
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        hours = float(value)
+    else:
+        text = str(value).strip().lower().replace("hours", "").replace("hrs", "").replace("hr", "").strip()
+        if not text:
+            return 0.0
+        try:
+            hours = float(text)
+        except ValueError:
+            raise ParseError("Could not read hours from %r" % value) from None
+    if hours < 0:
+        raise ParseError("Hours cannot be negative")
+    if hours > 10000:
+        raise ParseError("Hours looks too large")
+    return hours
     return (Decimal(int(cents)) / 100).quantize(Decimal("0.01"))
 
 

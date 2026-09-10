@@ -16,6 +16,7 @@ from .parsing import (
     describe_range,
     format_amount,
     format_date,
+    format_hours,
     parse_amount,
     parse_date,
     resolve_range,
@@ -36,9 +37,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Examples:\n"
             "  expenses night                       log everything you spent today, one line at a time\n"
             "  expenses add Coffee 4.50 Dining      log a single expense\n"
-            "  expenses add \"Saturday biryani\" 120 Income --order \"Saturday biryani\"\n"
-            "  expenses add Chicken 35 Groceries --order \"Saturday biryani\"\n"
-            "  expenses orders --month this        profit per food order\n"
+            "  expenses add Payment 120 Income      record money received\n"
+            "  expenses orders                      list food orders and profit\n"
             "  expenses list --days 7               the last seven days of expenses\n"
             "  expenses web                         open the browser interface\n"
         ),
@@ -63,7 +63,6 @@ def build_parser() -> argparse.ArgumentParser:
     add.add_argument("amount", help="how much it cost, e.g. 42.30")
     add.add_argument("category", nargs="?", default="Other", help="category name (default: Other)")
     add.add_argument("-d", "--date", default="today", help="date of the expense (default: today)")
-    add.add_argument("-o", "--order", default="", help="food order this entry belongs to")
     add.add_argument("-n", "--note", default="", help="optional note")
     add.set_defaults(handler=command_add)
 
@@ -77,7 +76,6 @@ def build_parser() -> argparse.ArgumentParser:
     listing = add_command("list", aliases=["ls"], help="show recorded expenses")
     _add_range_arguments(listing)
     listing.add_argument("-c", "--category", help="only this category")
-    listing.add_argument("-o", "--order", help="only this food order")
     listing.add_argument("-s", "--search", help="match text in the item or note")
     listing.add_argument("-l", "--limit", type=int, help="show at most this many entries")
     listing.add_argument("--oldest-first", action="store_true", help="sort oldest to newest")
@@ -94,7 +92,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="what to group by (default: category)",
     )
     summary.add_argument("-c", "--category", help="only this category")
-    summary.add_argument("-o", "--order", help="only this food order")
     summary.add_argument("-s", "--search", help="match text in the item or note")
     summary.add_argument("--json", action="store_true", help="print JSON instead of a table")
     summary.set_defaults(handler=command_summary)
@@ -105,7 +102,6 @@ def build_parser() -> argparse.ArgumentParser:
     edit.add_argument("-a", "--amount")
     edit.add_argument("-c", "--category")
     edit.add_argument("-d", "--date")
-    edit.add_argument("-o", "--order")
     edit.add_argument("-n", "--note")
     edit.set_defaults(handler=command_edit)
 
@@ -131,14 +127,42 @@ def build_parser() -> argparse.ArgumentParser:
     category_delete.set_defaults(action="delete")
     categories.set_defaults(handler=command_categories, action=None)
 
-    orders = add_command(
-        "orders",
-        help="income, expenses and profit grouped by food order",
-    )
-    _add_range_arguments(orders)
-    orders.add_argument("-o", "--order", help="only this food order")
-    orders.add_argument("--json", action="store_true", help="print JSON instead of a table")
-    orders.set_defaults(handler=command_orders)
+    orders = add_command("orders", help="food orders: income, costs, labour hours and profit")
+    order_actions = orders.add_subparsers(dest="order_action")
+    order_list = order_actions.add_parser("list", help="list food orders (default)")
+    _add_range_arguments(order_list)
+    order_list.add_argument("--json", action="store_true")
+    order_list.set_defaults(order_action="list")
+    order_create = order_actions.add_parser("create", help="create a food order")
+    order_create.add_argument("name")
+    order_create.add_argument("-d", "--date", default="today")
+    order_create.add_argument("-n", "--note", default="")
+    order_create.set_defaults(order_action="create")
+    order_show = order_actions.add_parser("show", help="show one food order")
+    order_show.add_argument("id", type=int)
+    order_show.set_defaults(order_action="show")
+    order_income = order_actions.add_parser("income", help="record money received for an order")
+    order_income.add_argument("id", type=int)
+    order_income.add_argument("amount")
+    order_income.add_argument("-i", "--item", default="Customer payment")
+    order_income.add_argument("-d", "--date", default="today")
+    order_income.set_defaults(order_action="income")
+    order_cost = order_actions.add_parser("cost", help="record a cost against an order")
+    order_cost.add_argument("id", type=int)
+    order_cost.add_argument("item")
+    order_cost.add_argument("amount")
+    order_cost.add_argument("category", nargs="?", default="Other")
+    order_cost.add_argument("--hours", default="")
+    order_cost.add_argument("-d", "--date", default="today")
+    order_cost.set_defaults(order_action="cost")
+    order_labour = order_actions.add_parser("labour", help="record labour hours and optional pay")
+    order_labour.add_argument("id", type=int)
+    order_labour.add_argument("item")
+    order_labour.add_argument("--hours", required=True)
+    order_labour.add_argument("-a", "--amount", default="0")
+    order_labour.add_argument("-d", "--date", default="today")
+    order_labour.set_defaults(order_action="labour")
+    orders.set_defaults(handler=command_orders, order_action=None)
 
     export = add_command("export", help="write expenses to CSV or JSON")
     _add_range_arguments(export)
@@ -208,36 +232,18 @@ def command_add(args, database: Database) -> int:
         category=_resolve_category(database, args.category),
         spent_on=args.date,
         note=args.note,
-        order_name=args.order,
     )
     symbol = database.currency_symbol
-    extras = []
-    if expense.order_name:
-        extras.append("order %s" % expense.order_name)
     print(
-        "Added #%d  %s  %s  %s  %s%s"
+        "Added #%d  %s  %s  %s  %s"
         % (
             expense.id,
             format_date(expense.spent_on),
             expense.item,
             expense.category,
             format_amount(expense.amount_cents, symbol),
-            ("  " + "  ".join(extras)) if extras else "",
         )
     )
-    if expense.order_name:
-        snapshot = database.get_order(expense.order_name)
-        if snapshot:
-            print(
-                "Order %s: income %s, expenses %s, profit %s"
-                % (
-                    snapshot.name,
-                    format_amount(snapshot.income_cents, symbol),
-                    format_amount(snapshot.expense_cents, symbol),
-                    format_amount(snapshot.profit_cents, symbol),
-                )
-            )
-            return 0
     day_total = database.totals(start=expense.spent_on, end=expense.spent_on, exclude_income=True)
     print(
         "Total for %s: %s"
@@ -257,7 +263,6 @@ def command_night(args, database: Database) -> int:
 
     added = 0
     last_category = None
-    last_order = ""
     while True:
         try:
             item = input("Item (blank to finish): ").strip()
@@ -272,8 +277,6 @@ def command_night(args, database: Database) -> int:
             default_category = last_category or "Other"
             prompt = "  Category [%s]: " % default_category
             category_text = input(prompt).strip() or default_category
-            order_prompt = "  Food order [%s]: " % last_order if last_order else "  Food order (blank if none): "
-            order_text = input(order_prompt).strip() or last_order
             note = input("  Note (optional): ").strip()
         except (EOFError, KeyboardInterrupt):
             print()
@@ -287,7 +290,6 @@ def command_night(args, database: Database) -> int:
                 category=category,
                 spent_on=date_value,
                 note=note,
-                order_name=order_text,
             )
         except (ParseError, StorageError) as error:
             print("  Not saved: %s" % error)
@@ -295,8 +297,6 @@ def command_night(args, database: Database) -> int:
 
         added += 1
         last_category = expense.category
-        if expense.order_name:
-            last_order = expense.order_name
         print(
             "  Saved #%d %s under %s"
             % (expense.id, format_amount(expense.amount_cents, symbol), expense.category)
@@ -324,7 +324,6 @@ def command_list(args, database: Database) -> int:
         end=end,
         category=_resolve_category(database, args.category) if args.category else None,
         search=args.search,
-        order_name=args.order,
         limit=args.limit,
         newest_first=not args.oldest_first,
     )
@@ -346,7 +345,6 @@ def command_summary(args, database: Database) -> int:
         end=end,
         category=_resolve_category(database, args.category) if args.category else None,
         search=args.search,
-        order_name=args.order,
         exclude_income=args.by == "category" and not args.category,
     )
     symbol = database.currency_symbol
@@ -378,7 +376,6 @@ def command_edit(args, database: Database) -> int:
         category=category,
         spent_on=args.date,
         note=args.note,
-        order_name=args.order,
     )
     symbol = database.currency_symbol
     print(
@@ -454,28 +451,84 @@ def command_categories(args, database: Database) -> int:
 
 
 def command_orders(args, database: Database) -> int:
-    start, end = _range_from_args(args)
-    orders = database.order_profits(start=start, end=end, order_name=args.order)
+    action = getattr(args, "order_action", None) or "list"
     symbol = database.currency_symbol
-    if args.json:
-        payload = {
-            "range": {
-                "start": format_date(start) if start else None,
-                "end": format_date(end) if end else None,
-            },
-            "orders": [order.to_dict(symbol) for order in orders],
-            "income_cents": sum(order.income_cents for order in orders),
-            "expense_cents": sum(order.expense_cents for order in orders),
-            "profit_cents": sum(order.profit_cents for order in orders),
-        }
-        print(json.dumps(payload, indent=2))
+
+    if action == "create":
+        order = database.create_food_order(args.name, args.date, args.note)
+        print("Created food order #%d %s on %s" % (order.id, order.name, format_date(order.order_date)))
+        print("Open http://127.0.0.1:8765/orders/%d to add income and costs." % order.id)
         return 0
-    title = "Food order profit (%s)" % describe_range(start, end)
-    print(render_orders(orders, symbol, title=title))
-    if args.order and orders:
-        entries = database.list_expenses(start=start, end=end, order_name=args.order, newest_first=False)
-        print()
-        print(render_expenses(entries, symbol))
+
+    if action == "show":
+        order = database.get_food_order(args.id)
+        print(render_orders([order], symbol, title=order.name))
+        if order.entries:
+            print()
+            rows = []
+            for entry in order.entries:
+                rows.append(
+                    [
+                        entry.kind,
+                        format_date(entry.spent_on),
+                        entry.item,
+                        entry.category,
+                        format_amount(entry.amount_cents, symbol),
+                        format_hours(entry.hours) if entry.hours else "",
+                    ]
+                )
+            print(
+                render_table(
+                    ["TYPE", "DATE", "ITEM", "CATEGORY", "AMOUNT", "HOURS"],
+                    rows,
+                    ["left", "left", "left", "left", "right", "right"],
+                )
+            )
+        return 0
+
+    if action == "income":
+        entry = database.add_order_entry(
+            args.id, kind="income", item=args.item, amount=args.amount, spent_on=args.date
+        )
+        order = database.get_food_order(args.id, with_entries=False)
+        print(
+            "Recorded income %s. Order profit is now %s"
+            % (format_amount(entry.amount_cents, symbol), format_amount(order.profit_cents, symbol))
+        )
+        return 0
+
+    if action in {"cost", "labour"}:
+        hours = args.hours if action == "labour" else getattr(args, "hours", "")
+        category = "Labour" if action == "labour" else args.category
+        amount = args.amount if action == "labour" else args.amount
+        item = args.item
+        entry = database.add_order_entry(
+            args.id,
+            kind="cost",
+            item=item,
+            amount=amount,
+            category=category,
+            hours=hours,
+            spent_on=args.date,
+        )
+        order = database.get_food_order(args.id, with_entries=False)
+        print(
+            "Recorded %s under %s. Order profit is now %s (%s hours)"
+            % (
+                format_amount(entry.amount_cents, symbol),
+                entry.category,
+                format_amount(order.profit_cents, symbol),
+                format_hours(order.hours),
+            )
+        )
+        return 0
+
+    start, end = _range_from_args(args)
+    orders = database.list_food_orders(start=start, end=end)
+    if getattr(args, "json", False):
+        print(json.dumps([order.to_dict(symbol) for order in orders], indent=2))
+        return 0
+    print(render_orders(orders, symbol, title="Food orders (%s)" % describe_range(start, end)))
     return 0
 
 

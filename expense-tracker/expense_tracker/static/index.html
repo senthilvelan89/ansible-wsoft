@@ -15,12 +15,16 @@
       <p class="subtitle" id="retention-note">Loading&hellip;</p>
     </div>
   </div>
+  <nav class="nav">
+    <a class="nav-link" id="nav-expenses" href="/">Expenses</a>
+    <a class="nav-link" id="nav-orders" href="/orders">Food orders</a>
+  </nav>
   <div class="topbar-actions">
     <a class="button ghost" id="export-link" href="/export.csv">Export CSV</a>
   </div>
 </header>
 
-<main>
+<main id="view-expenses">
   <section class="panel entry" aria-labelledby="entry-heading">
     <div class="panel-head">
       <h2 id="entry-heading">Log an expense</h2>
@@ -53,18 +57,13 @@
         </label>
       </div>
       <label class="field">
-        <span>Food order <em>(required for income, optional for costs)</em></span>
-        <input type="text" id="field-order" list="order-suggestions" placeholder="e.g. Saturday biryani" maxlength="120">
-        <datalist id="order-suggestions"></datalist>
-      </label>
-      <label class="field">
         <span>Note <em>(optional)</em></span>
         <input type="text" id="field-note" placeholder="Anything worth remembering" maxlength="500">
       </label>
       <div class="form-actions">
         <button type="submit" class="button primary" id="submit-button">Add expense</button>
         <button type="button" class="button ghost hidden" id="cancel-edit">Cancel</button>
-        <span class="hint">Tip: keep adding entries, the form stays ready for the next one.</span>
+        <span class="hint">Use <a href="/orders">Food orders</a> to track income, costs and profit per order.</span>
       </div>
     </form>
 
@@ -85,15 +84,6 @@
     <h3 class="section-title">Last 12 months</h3>
     <p class="muted" id="window-total"></p>
     <div id="trend" class="trend"></div>
-  </section>
-
-  <section class="panel wide" aria-labelledby="orders-heading">
-    <div class="panel-head">
-      <h2 id="orders-heading">Food order profit</h2>
-      <span class="pill" id="orders-total">&mdash;</span>
-    </div>
-    <p class="muted" id="orders-label">Link income and costs with the same food order name to see profit.</p>
-    <div id="orders-table"></div>
   </section>
 
   <section class="panel wide" aria-labelledby="history-heading">
@@ -126,10 +116,6 @@
         <span>Category</span>
         <select id="filter-category"><option value="">All categories</option></select>
       </label>
-      <label class="field">
-        <span>Food order</span>
-        <select id="filter-order"><option value="">All orders</option></select>
-      </label>
       <label class="field grow">
         <span>Search</span>
         <input type="search" id="filter-search" placeholder="Item or note text">
@@ -138,6 +124,110 @@
 
     <div id="history-breakdown" class="bars compact"></div>
     <div id="history-entries"></div>
+  </section>
+</main>
+
+<main id="view-orders" class="hidden">
+  <section class="panel wide">
+    <div class="panel-head">
+      <h2>Food orders</h2>
+      <span class="pill" id="orders-profit-pill">&mdash;</span>
+    </div>
+    <p class="muted">Create an order, record money received, then add every cost for that order. Profit is income minus costs.</p>
+
+    <form id="create-order-form" class="create-order" autocomplete="off">
+      <label class="field grow">
+        <span>Order name</span>
+        <input type="text" id="new-order-name" placeholder="e.g. Saturday biryani" required maxlength="160">
+      </label>
+      <label class="field date-field">
+        <span>Date</span>
+        <input type="date" id="new-order-date" required>
+      </label>
+      <label class="field grow">
+        <span>Note <em>(optional)</em></span>
+        <input type="text" id="new-order-note" maxlength="500">
+      </label>
+      <button type="submit" class="button primary">Create order</button>
+    </form>
+
+    <div id="orders-list"></div>
+  </section>
+</main>
+
+<main id="view-order" class="hidden">
+  <section class="panel wide">
+    <p class="back"><a href="/orders">&larr; All food orders</a></p>
+    <div class="panel-head">
+      <h2 id="order-title">Order</h2>
+      <span class="pill" id="order-profit-pill">&mdash;</span>
+    </div>
+    <p class="muted" id="order-meta"></p>
+
+    <div class="stat-grid" id="order-stats"></div>
+    <div id="order-cost-bars" class="bars compact"></div>
+
+    <div class="split">
+      <form id="income-form" class="subform" autocomplete="off">
+        <h3>Money received</h3>
+        <label class="field">
+          <span>Date</span>
+          <input type="date" id="income-date" required>
+        </label>
+        <label class="field">
+          <span>Description</span>
+          <input type="text" id="income-item" placeholder="Customer payment" required maxlength="200">
+        </label>
+        <label class="field">
+          <span>Amount received</span>
+          <input type="text" inputmode="decimal" id="income-amount" placeholder="0.00" required>
+        </label>
+        <label class="field">
+          <span>Note <em>(optional)</em></span>
+          <input type="text" id="income-note" maxlength="500">
+        </label>
+        <button type="submit" class="button primary">Add income</button>
+      </form>
+
+      <form id="cost-form" class="subform" autocomplete="off">
+        <h3>Cost for this order</h3>
+        <label class="field">
+          <span>Date</span>
+          <input type="date" id="cost-date" required>
+        </label>
+        <label class="field">
+          <span>Item</span>
+          <input type="text" id="cost-item" placeholder="Chicken, bags, cook time&hellip;" required maxlength="200">
+        </label>
+        <div class="field-row">
+          <label class="field grow">
+            <span>Category</span>
+            <div class="category-row">
+              <select id="cost-category"></select>
+              <button type="button" class="button ghost small" id="new-order-category">+ New</button>
+            </div>
+          </label>
+          <label class="field">
+            <span>Cost</span>
+            <input type="text" inputmode="decimal" id="cost-amount" placeholder="0.00" required>
+          </label>
+        </div>
+        <label class="field hidden" id="cost-hours-field">
+          <span>Labour hours</span>
+          <input type="text" inputmode="decimal" id="cost-hours" placeholder="e.g. 3.5">
+        </label>
+        <label class="field">
+          <span>Note <em>(optional)</em></span>
+          <input type="text" id="cost-note" maxlength="500">
+        </label>
+        <button type="submit" class="button primary">Add cost</button>
+      </form>
+    </div>
+
+    <h3 class="section-title">Income</h3>
+    <div id="order-income-table"></div>
+    <h3 class="section-title">Costs</h3>
+    <div id="order-cost-table"></div>
   </section>
 </main>
 

@@ -21,8 +21,9 @@ from .parsing import (
     parse_date,
     today,
 )
+from .food_orders import FoodOrderMixin
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 INCOME_CATEGORY = "Income"
 
 DEFAULT_CATEGORIES = (
@@ -165,7 +166,7 @@ def default_db_path() -> Path:
     return default_home() / "expenses.db"
 
 
-class Database:
+class Database(FoodOrderMixin):
     """All persistence lives here; a connection is opened per operation.
 
     Opening per operation keeps the class safe to share between the threads of
@@ -269,6 +270,7 @@ class Database:
             "INSERT OR IGNORE INTO categories (name, created_at) VALUES (?, ?)",
             [(name, stamp) for name in DEFAULT_CATEGORIES],
         )
+        self.ensure_order_schema(connection)
 
     # -------------------------------------------------------------- settings
 

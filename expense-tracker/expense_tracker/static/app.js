@@ -3,18 +3,21 @@
 const state = {
   currency: "$",
   categories: [],
-  orderNames: [],
+  orderCategories: [],
   today: new Date().toISOString().slice(0, 10),
+  currentOrderId: null,
 };
 
 const $ = (id) => document.getElementById(id);
+const path = (location.pathname.replace(/\/+$/, "") || "/");
+const orderMatch = path.match(/^\/orders\/(\d+)$/);
+const page = orderMatch ? "order" : path === "/orders" ? "orders" : "expenses";
 
 const form = $("entry-form");
 const fieldDate = $("field-date");
 const fieldItem = $("field-item");
 const fieldAmount = $("field-amount");
 const fieldCategory = $("field-category");
-const fieldOrder = $("field-order");
 const fieldNote = $("field-note");
 const editId = $("edit-id");
 const submitButton = $("submit-button");
@@ -23,7 +26,6 @@ const filterRange = $("filter-range");
 const filterFrom = $("filter-from");
 const filterTo = $("filter-to");
 const filterCategory = $("filter-category");
-const filterOrder = $("filter-order");
 const filterSearch = $("filter-search");
 const amountLabel = $("amount-label");
 
@@ -54,8 +56,8 @@ function toast(message, isError = false) {
   toastTimer = setTimeout(() => node.classList.remove("show"), isError ? 4200 : 2200);
 }
 
-async function api(path, options = {}) {
-  const response = await fetch(path, {
+async function api(pathName, options = {}) {
+  const response = await fetch(pathName, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -73,16 +75,6 @@ async function api(path, options = {}) {
   return payload;
 }
 
-function money(cents) {
-  const negative = cents < 0;
-  const value = Math.abs(cents) / 100;
-  const text = state.currency + value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return negative ? "-" + text : text;
-}
-
 function debounce(fn, wait) {
   let timer = null;
   return (...args) => {
@@ -98,22 +90,72 @@ function monthLabel(key) {
   return month === 1 ? `${name} '${String(year).slice(2)}` : name;
 }
 
-// ------------------------------------------------------------- rendering
-
 function isIncomeCategory(name) {
   return (name || "").trim().toLowerCase() === "income";
+}
+
+function isLabourCategory(name) {
+  return (name || "").trim().toLowerCase() === "labour";
+}
+
+function profitClass(cents) {
+  return cents >= 0 ? "profit-positive" : "profit-negative";
 }
 
 function syncAmountLabel() {
   const income = isIncomeCategory(fieldCategory.value);
   amountLabel.textContent = income ? "Amount received" : "Cost";
-  fieldItem.placeholder = income ? "Which food order was this payment for?" : "What did you buy?";
-  submitButton.textContent = editId.value
-    ? `Save changes to #${editId.value}`
-    : income
-      ? "Add income"
-      : "Add expense";
+  fieldItem.placeholder = income ? "Where did this money come from?" : "What did you buy?";
+  if (!editId.value) submitButton.textContent = income ? "Add income" : "Add expense";
 }
+
+function showPage() {
+  $("view-expenses").classList.toggle("hidden", page !== "expenses");
+  $("view-orders").classList.toggle("hidden", page !== "orders");
+  $("view-order").classList.toggle("hidden", page !== "order");
+  $("nav-expenses").classList.toggle("active", page === "expenses");
+  $("nav-orders").classList.toggle("active", page === "orders" || page === "order");
+  $("export-link").classList.toggle("hidden", page !== "expenses");
+}
+
+function empty(text) {
+  return el("p", { class: "empty", text });
+}
+
+function lineTable(rows, columns, { onDelete } = {}) {
+  if (!rows.length) return empty("Nothing recorded yet.");
+  const head = el(
+    "tr",
+    {},
+    columns.map((col) => el("th", { class: col.amount ? "amount" : "", text: col.label }))
+  );
+  head.appendChild(el("th", { class: "actions", text: "" }));
+  const body = rows.map((row) => {
+    const tr = el(
+      "tr",
+      {},
+      columns.map((col) =>
+        el("td", {
+          class: col.amount ? "amount" : col.date ? "date" : "",
+          text: col.value(row),
+        })
+      )
+    );
+    tr.appendChild(
+      el("td", { class: "actions" }, [
+        el("button", {
+          class: "button link danger",
+          text: "Delete",
+          onclick: () => onDelete(row),
+        }),
+      ])
+    );
+    return tr;
+  });
+  return el("table", {}, [el("thead", {}, [head]), el("tbody", {}, body)]);
+}
+
+// ------------------------------------------------------------- expenses
 
 function renderCategoryOptions() {
   const current = fieldCategory.value;
@@ -127,33 +169,18 @@ function renderCategoryOptions() {
     ...state.categories.map((name) => el("option", { value: name, text: name }))
   );
   if (state.categories.includes(selectedFilter)) filterCategory.value = selectedFilter;
-
-  const suggestions = $("order-suggestions");
-  suggestions.replaceChildren(...state.orderNames.map((name) => el("option", { value: name })));
-
-  const selectedOrder = filterOrder.value;
-  filterOrder.replaceChildren(
-    el("option", { value: "", text: "All orders" }),
-    ...state.orderNames.map((name) => el("option", { value: name, text: name }))
-  );
-  if (state.orderNames.includes(selectedOrder)) filterOrder.value = selectedOrder;
   syncAmountLabel();
 }
 
 function expenseTable(expenses, { showDate }) {
-  if (!expenses.length) {
-    return el("p", { class: "empty", text: "Nothing recorded yet." });
-  }
-
+  if (!expenses.length) return empty("Nothing recorded yet.");
   const head = el("tr", {}, [
     showDate ? el("th", { text: "Date" }) : null,
     el("th", { text: "Item" }),
     el("th", { text: "Category" }),
-    el("th", { text: "Order" }),
     el("th", { class: "amount", text: "Amount" }),
     el("th", { class: "actions", text: "" }),
   ]);
-
   const rows = expenses.map((expense) =>
     el("tr", {}, [
       showDate ? el("td", { class: "date", text: expense.date }) : null,
@@ -164,7 +191,6 @@ function expenseTable(expenses, { showDate }) {
       el("td", {}, [
         el("span", { class: expense.is_income ? "tag income" : "tag", text: expense.category }),
       ]),
-      el("td", {}, expense.order_name ? [el("span", { class: "tag", text: expense.order_name })] : [el("span", { class: "note", text: "" })]),
       el("td", { class: "amount", text: expense.amount_display }),
       el("td", { class: "actions" }, [
         el("button", { class: "button link", text: "Edit", onclick: () => startEdit(expense) }),
@@ -176,13 +202,12 @@ function expenseTable(expenses, { showDate }) {
       ]),
     ])
   );
-
   return el("table", {}, [el("thead", {}, [head]), el("tbody", {}, rows)]);
 }
 
 function renderBars(container, buckets) {
   if (!buckets.length) {
-    container.replaceChildren(el("p", { class: "empty", text: "No spending in this range." }));
+    container.replaceChildren(empty("No spending in this range."));
     return;
   }
   const largest = Math.max(...buckets.map((bucket) => Math.abs(bucket.total_cents)), 1);
@@ -207,7 +232,7 @@ function renderBars(container, buckets) {
 function renderTrend(months) {
   const container = $("trend");
   if (!months.length) {
-    container.replaceChildren(el("p", { class: "empty", text: "No history yet." }));
+    container.replaceChildren(empty("No history yet."));
     return;
   }
   const largest = Math.max(...months.map((bucket) => Math.abs(bucket.total_cents)), 1);
@@ -224,79 +249,22 @@ function renderTrend(months) {
   );
 }
 
-function renderOrders(orders, totals) {
-  const container = $("orders-table");
-  $("orders-total").textContent = totals
-    ? `Profit ${totals.profit_display}`
-    : "—";
-  if (!orders.length) {
-    container.replaceChildren(
-      el("p", {
-        class: "empty",
-        text: "No food orders in this range. Log income with category Income and put the same order name on the costs.",
-      })
-    );
-    return;
-  }
-
-  const stats = el("p", { class: "order-stats" }, [
-    el("span", {}, ["Income ", el("strong", { text: totals.income_display })]),
-    el("span", {}, ["Expenses ", el("strong", { text: totals.expense_display })]),
-    el("span", {}, [
-      "Profit ",
-      el("strong", {
-        class: totals.profit_cents >= 0 ? "profit-positive" : "profit-negative",
-        text: totals.profit_display,
-      }),
-    ]),
-  ]);
-
-  const head = el("tr", {}, [
-    el("th", { text: "Order" }),
-    el("th", { text: "Last date" }),
-    el("th", { class: "amount", text: "Income" }),
-    el("th", { class: "amount", text: "Expenses" }),
-    el("th", { class: "amount", text: "Profit" }),
-  ]);
-  const rows = orders.map((order) =>
-    el("tr", {}, [
-      el("td", {}, [el("span", { text: order.name })]),
-      el("td", { class: "date", text: order.last_date || "" }),
-      el("td", { class: "amount", text: order.income_display }),
-      el("td", { class: "amount", text: order.expense_display }),
-      el("td", {
-        class: `amount ${order.profit_cents >= 0 ? "profit-positive" : "profit-negative"}`,
-        text: order.profit_display,
-      }),
-    ])
-  );
-  container.replaceChildren(stats, el("table", {}, [el("thead", {}, [head]), el("tbody", {}, rows)]));
-}
-
-// --------------------------------------------------------------- loading
-
 async function loadState() {
   const data = await api(`/api/state?date=${encodeURIComponent(fieldDate.value || state.today)}`);
   state.currency = data.currency;
   state.categories = data.categories;
-  state.orderNames = data.order_names || [];
   state.today = data.today;
-
   renderCategoryOptions();
-
   $("retention-note").textContent =
     `Keeping ${data.retention_months} months of history · entries before ${data.retention_cutoff} are archived to CSV`;
-
   let dayLabel = `${data.day.total_display} spent on ${data.day.date}`;
   if (data.day.income_cents) dayLabel += ` · ${data.day.income_display} in`;
   $("day-total").textContent = dayLabel;
   $("day-label").textContent = data.day.date === data.today ? `today (${data.day.date})` : data.day.date;
   $("day-entries").replaceChildren(expenseTable(data.day.expenses, { showDate: false }));
-
   $("month-total").textContent = data.month.total_display + " spent";
   $("month-label").textContent = `${data.month.label} · ${data.month.start} to ${data.month.end}`;
   renderBars($("month-breakdown"), data.month.categories);
-
   $("window-total").textContent =
     `${data.window.total_display} between ${data.window.start} and ${data.window.end}`;
   renderTrend(data.window.months);
@@ -311,9 +279,7 @@ function currentFilters() {
     if (filterFrom.value) params.set("from", filterFrom.value);
     if (filterTo.value) params.set("to", filterTo.value);
   } else params.set("days", range);
-
   if (filterCategory.value) params.set("category", filterCategory.value);
-  if (filterOrder.value) params.set("order", filterOrder.value);
   if (filterSearch.value.trim()) params.set("search", filterSearch.value.trim());
   return params;
 }
@@ -321,30 +287,18 @@ function currentFilters() {
 async function loadHistory() {
   const params = currentFilters();
   $("export-link").href = `/export.csv?${params.toString()}`;
-
-  const [listing, summary, orders] = await Promise.all([
+  const [listing, summary] = await Promise.all([
     api(`/api/expenses?${params.toString()}`),
     api(`/api/summary?${params.toString()}`),
-    api(`/api/orders?${params.toString()}`),
   ]);
-
   $("history-total").textContent = `${listing.total_display} spent · ${listing.expenses.length} entries`;
   renderBars($("history-breakdown"), summary.buckets);
   $("history-entries").replaceChildren(expenseTable(listing.expenses, { showDate: true }));
-  $("orders-label").textContent =
-    "Income minus costs for each named food order in this range. Use the same order name on both.";
-  renderOrders(orders.orders, orders);
 }
 
-async function refresh() {
-  try {
-    await Promise.all([loadState(), loadHistory()]);
-  } catch (error) {
-    toast(error.message, true);
-  }
+async function refreshExpenses() {
+  await Promise.all([loadState(), loadHistory()]);
 }
-
-// ---------------------------------------------------------------- actions
 
 function startEdit(expense) {
   editId.value = expense.id;
@@ -355,13 +309,11 @@ function startEdit(expense) {
     fieldCategory.appendChild(el("option", { value: expense.category, text: expense.category }));
   }
   fieldCategory.value = expense.category;
-  fieldOrder.value = expense.order_name || "";
   fieldNote.value = expense.note || "";
   syncAmountLabel();
   submitButton.textContent = `Save changes to #${expense.id}`;
   cancelEdit.classList.remove("hidden");
   fieldItem.focus();
-  fieldItem.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 function stopEdit() {
@@ -376,95 +328,292 @@ function stopEdit() {
 
 async function removeExpense(expense) {
   if (!confirm(`Delete "${expense.item}" (${expense.amount_display}) from ${expense.date}?`)) return;
-  try {
-    await api(`/api/expenses/${expense.id}`, { method: "DELETE" });
-    if (editId.value === String(expense.id)) stopEdit();
-    toast("Deleted");
-    await refresh();
-  } catch (error) {
-    toast(error.message, true);
-  }
+  await api(`/api/expenses/${expense.id}`, { method: "DELETE" });
+  if (editId.value === String(expense.id)) stopEdit();
+  toast("Deleted");
+  await refreshExpenses();
 }
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const payload = {
-    date: fieldDate.value,
-    item: fieldItem.value.trim(),
-    amount: fieldAmount.value.trim(),
-    category: fieldCategory.value,
-    order_name: fieldOrder.value.trim(),
-    note: fieldNote.value.trim(),
-  };
-
-  try {
-    if (editId.value) {
-      await api(`/api/expenses/${editId.value}`, { method: "PATCH", body: JSON.stringify(payload) });
-      toast("Saved");
-      stopEdit();
-    } else {
-      const result = await api("/api/expenses", { method: "POST", body: JSON.stringify(payload) });
-      const kind = result.expense.is_income ? "income" : result.expense.category;
-      toast(`Added ${result.expense.amount_display} to ${kind}`);
-      if (result.expense.order_name) fieldOrder.value = result.expense.order_name;
-      fieldItem.value = "";
-      fieldAmount.value = "";
-      fieldNote.value = "";
+function wireExpensePage() {
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const payload = {
+      date: fieldDate.value,
+      item: fieldItem.value.trim(),
+      amount: fieldAmount.value.trim(),
+      category: fieldCategory.value,
+      note: fieldNote.value.trim(),
+    };
+    try {
+      if (editId.value) {
+        await api(`/api/expenses/${editId.value}`, { method: "PATCH", body: JSON.stringify(payload) });
+        toast("Saved");
+        stopEdit();
+      } else {
+        const result = await api("/api/expenses", { method: "POST", body: JSON.stringify(payload) });
+        const kind = result.expense.is_income ? "income" : result.expense.category;
+        toast(`Added ${result.expense.amount_display} to ${kind}`);
+        fieldItem.value = "";
+        fieldAmount.value = "";
+        fieldNote.value = "";
+      }
+      fieldItem.focus();
+      await refreshExpenses();
+    } catch (error) {
+      toast(error.message, true);
     }
-    fieldItem.focus();
-    await refresh();
-  } catch (error) {
-    toast(error.message, true);
+  });
+
+  cancelEdit.addEventListener("click", stopEdit);
+  $("new-category").addEventListener("click", async () => {
+    const name = prompt("Name for the new category:");
+    if (!name || !name.trim()) return;
+    try {
+      const result = await api("/api/categories", { method: "POST", body: JSON.stringify({ name: name.trim() }) });
+      state.categories = result.categories;
+      renderCategoryOptions();
+      fieldCategory.value = result.category;
+      toast(`Category "${result.category}" ready`);
+    } catch (error) {
+      toast(error.message, true);
+    }
+  });
+  fieldCategory.addEventListener("change", syncAmountLabel);
+  fieldDate.addEventListener("change", () => loadState().catch((error) => toast(error.message, true)));
+  filterRange.addEventListener("change", () => {
+    const custom = filterRange.value === "custom";
+    $("custom-from-field").classList.toggle("hidden", !custom);
+    $("custom-to-field").classList.toggle("hidden", !custom);
+    if (custom && !filterFrom.value && !filterTo.value) {
+      const now = new Date();
+      filterFrom.value = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString("en-CA");
+      filterTo.value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toLocaleDateString("en-CA");
+    }
+    loadHistory().catch((error) => toast(error.message, true));
+  });
+  [filterFrom, filterTo, filterCategory].forEach((input) =>
+    input.addEventListener("change", () => loadHistory().catch((error) => toast(error.message, true)))
+  );
+  filterSearch.addEventListener(
+    "input",
+    debounce(() => loadHistory().catch((error) => toast(error.message, true)), 250)
+  );
+}
+
+// --------------------------------------------------------------- orders
+
+function fillOrderCategories(selected) {
+  const select = $("cost-category");
+  select.replaceChildren(...state.orderCategories.map((name) => el("option", { value: name, text: name })));
+  if (selected && state.orderCategories.includes(selected)) select.value = selected;
+  else if (state.orderCategories.includes("Grocery")) select.value = "Grocery";
+  $("cost-hours-field").classList.toggle("hidden", !isLabourCategory(select.value));
+}
+
+async function loadOrderList() {
+  const data = await api("/api/food-orders");
+  $("orders-profit-pill").textContent = `Profit ${data.profit_display}`;
+  if (!data.orders.length) {
+    $("orders-list").replaceChildren(empty("No food orders yet. Create one above."));
+    return;
   }
-});
-
-cancelEdit.addEventListener("click", stopEdit);
-
-$("new-category").addEventListener("click", async () => {
-  const name = prompt("Name for the new category:");
-  if (!name || !name.trim()) return;
-  try {
-    const result = await api("/api/categories", {
-      method: "POST",
-      body: JSON.stringify({ name: name.trim() }),
+  const table = lineTable(
+    data.orders,
+    [
+      { label: "Order", value: (row) => row.name },
+      { label: "Date", date: true, value: (row) => row.date },
+      { label: "Income", amount: true, value: (row) => row.income_display },
+      { label: "Expenses", amount: true, value: (row) => row.expense_display },
+      { label: "Profit", amount: true, value: (row) => row.profit_display },
+      { label: "Hours", amount: true, value: (row) => row.hours_display },
+    ],
+    {
+      onDelete: async (row) => {
+        if (!confirm(`Delete order "${row.name}" and all of its income and costs?`)) return;
+        await api(`/api/food-orders/${row.id}`, { method: "DELETE" });
+        toast("Order deleted");
+        await loadOrderList();
+      },
+    }
+  );
+  table.querySelectorAll("tbody tr").forEach((tr, index) => {
+    const order = data.orders[index];
+    tr.style.cursor = "pointer";
+    tr.addEventListener("click", (event) => {
+      if (event.target.closest("button")) return;
+      location.href = `/orders/${order.id}`;
     });
-    state.categories = result.categories;
-    renderCategoryOptions();
-    fieldCategory.value = result.category;
-    toast(`Category "${result.category}" ready`);
-  } catch (error) {
-    toast(error.message, true);
-  }
-});
+    const profitCell = tr.children[4];
+    if (profitCell) profitCell.classList.add(profitClass(order.profit_cents));
+  });
+  $("orders-list").replaceChildren(table);
+}
 
-fieldCategory.addEventListener("change", syncAmountLabel);
+async function loadOrderDetail(orderId) {
+  const [order, categories] = await Promise.all([
+    api(`/api/food-orders/${orderId}`),
+    api("/api/order-categories"),
+  ]);
+  state.orderCategories = categories.categories;
+  state.currentOrderId = order.id;
+  fillOrderCategories($("cost-category").value);
+  $("order-title").textContent = order.name;
+  $("order-meta").textContent = `${order.date}${order.note ? " · " + order.note : ""}`;
+  $("order-profit-pill").textContent = `Profit ${order.profit_display}`;
+  $("order-profit-pill").className = `pill`;
+  $("order-stats").replaceChildren(
+    ...[
+      ["Income", order.income_display, ""],
+      ["Expenses", order.expense_display, ""],
+      ["Profit", order.profit_display, profitClass(order.profit_cents)],
+      ["Labour hours", order.hours_display, ""],
+    ].map(([label, value, extra]) =>
+      el("div", { class: "stat-card" }, [
+        el("span", { class: "label", text: label }),
+        el("span", { class: `value ${extra}`, text: value }),
+      ])
+    )
+  );
+  renderBars($("order-cost-bars"), order.cost_categories || []);
+  $("order-income-table").replaceChildren(
+    lineTable(
+      order.income_entries || [],
+      [
+        { label: "Date", date: true, value: (row) => row.date },
+        { label: "Item", value: (row) => row.item },
+        { label: "Amount", amount: true, value: (row) => row.amount_display },
+      ],
+      { onDelete: (row) => deleteOrderEntry(row) }
+    )
+  );
+  $("order-cost-table").replaceChildren(
+    lineTable(
+      order.cost_entries || [],
+      [
+        { label: "Date", date: true, value: (row) => row.date },
+        { label: "Item", value: (row) => row.item },
+        { label: "Category", value: (row) => row.category },
+        { label: "Cost", amount: true, value: (row) => row.amount_display },
+        { label: "Hours", amount: true, value: (row) => (row.hours ? row.hours_display : "") },
+      ],
+      { onDelete: (row) => deleteOrderEntry(row) }
+    )
+  );
+  if (!$("income-date").value) $("income-date").value = order.date;
+  if (!$("cost-date").value) $("cost-date").value = order.date;
+}
 
-fieldDate.addEventListener("change", () => {
-  loadState().catch((error) => toast(error.message, true));
-});
+async function deleteOrderEntry(row) {
+  if (!confirm(`Delete "${row.item}" (${row.amount_display})?`)) return;
+  await api(`/api/food-orders/${state.currentOrderId}/entries/${row.id}`, { method: "DELETE" });
+  toast("Deleted");
+  await loadOrderDetail(state.currentOrderId);
+}
 
-filterRange.addEventListener("change", () => {
-  const custom = filterRange.value === "custom";
-  $("custom-from-field").classList.toggle("hidden", !custom);
-  $("custom-to-field").classList.toggle("hidden", !custom);
-  if (custom && !filterFrom.value && !filterTo.value) {
-    const now = new Date();
-    filterFrom.value = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString("en-CA");
-    filterTo.value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toLocaleDateString("en-CA");
-  }
-  loadHistory().catch((error) => toast(error.message, true));
-});
+function wireOrderPages() {
+  $("new-order-date").value = state.today;
+  $("create-order-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      const created = await api("/api/food-orders", {
+        method: "POST",
+        body: JSON.stringify({
+          name: $("new-order-name").value.trim(),
+          date: $("new-order-date").value,
+          note: $("new-order-note").value.trim(),
+        }),
+      });
+      location.href = `/orders/${created.order.id}`;
+    } catch (error) {
+      toast(error.message, true);
+    }
+  });
 
-[filterFrom, filterTo, filterCategory, filterOrder].forEach((input) =>
-  input.addEventListener("change", () => loadHistory().catch((error) => toast(error.message, true)))
-);
+  $("income-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      await api(`/api/food-orders/${state.currentOrderId}/entries`, {
+        method: "POST",
+        body: JSON.stringify({
+          kind: "income",
+          date: $("income-date").value,
+          item: $("income-item").value.trim(),
+          amount: $("income-amount").value.trim(),
+          note: $("income-note").value.trim(),
+        }),
+      });
+      $("income-item").value = "";
+      $("income-amount").value = "";
+      $("income-note").value = "";
+      toast("Income recorded");
+      await loadOrderDetail(state.currentOrderId);
+    } catch (error) {
+      toast(error.message, true);
+    }
+  });
 
-filterSearch.addEventListener(
-  "input",
-  debounce(() => loadHistory().catch((error) => toast(error.message, true)), 250)
-);
+  $("cost-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      await api(`/api/food-orders/${state.currentOrderId}/entries`, {
+        method: "POST",
+        body: JSON.stringify({
+          kind: "cost",
+          date: $("cost-date").value,
+          item: $("cost-item").value.trim(),
+          amount: $("cost-amount").value.trim(),
+          category: $("cost-category").value,
+          hours: $("cost-hours").value.trim(),
+          note: $("cost-note").value.trim(),
+        }),
+      });
+      $("cost-item").value = "";
+      $("cost-amount").value = "";
+      $("cost-hours").value = "";
+      $("cost-note").value = "";
+      toast("Cost recorded");
+      await loadOrderDetail(state.currentOrderId);
+    } catch (error) {
+      toast(error.message, true);
+    }
+  });
+
+  $("cost-category").addEventListener("change", () => {
+    $("cost-hours-field").classList.toggle("hidden", !isLabourCategory($("cost-category").value));
+  });
+
+  $("new-order-category").addEventListener("click", async () => {
+    const name = prompt("Name for the new order cost category:");
+    if (!name || !name.trim()) return;
+    try {
+      const result = await api("/api/order-categories", {
+        method: "POST",
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      state.orderCategories = result.categories;
+      fillOrderCategories(result.category);
+      toast(`Category "${result.category}" ready`);
+    } catch (error) {
+      toast(error.message, true);
+    }
+  });
+}
 
 // ------------------------------------------------------------------ start
 
-fieldDate.value = new Date().toISOString().slice(0, 10);
-refresh().then(() => fieldItem.focus());
+showPage();
+if (page === "expenses") {
+  fieldDate.value = new Date().toISOString().slice(0, 10);
+  wireExpensePage();
+  refreshExpenses()
+    .then(() => fieldItem.focus())
+    .catch((error) => toast(error.message, true));
+} else if (page === "orders") {
+  $("retention-note").textContent = "Income minus costs for each food order";
+  wireOrderPages();
+  loadOrderList().catch((error) => toast(error.message, true));
+} else {
+  $("retention-note").textContent = "Income, costs, labour hours and profit for this order";
+  wireOrderPages();
+  loadOrderDetail(Number(orderMatch[1])).catch((error) => toast(error.message, true));
+}
