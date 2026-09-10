@@ -21,13 +21,14 @@
 </header>
 
 <main>
-  <section class="panel due-strip" aria-labelledby="due-heading">
+  <section class="panel wide" aria-labelledby="board-heading">
     <div class="panel-head">
-      <h2 id="due-heading">By date</h2>
-      <span class="pill" id="due-count">&mdash;</span>
+      <h2 id="board-heading">Next step in each category</h2>
+      <span class="pill" id="board-count">&mdash;</span>
     </div>
-    <p class="muted">Open next steps and queued work with a due date, so nothing dated slips past.</p>
-    <div id="due-soon"></div>
+    <p class="muted">Look here first. One highlighted next step per category, so nothing is skipped.</p>
+    <div id="due-soon" class="due-soon"></div>
+    <div id="board" class="board"></div>
   </section>
 
   <section class="panel entry" aria-labelledby="add-heading">
@@ -61,9 +62,14 @@
         <span class="hint">Queued steps wait behind the current next step so you cannot skip them.</span>
       </div>
     </form>
+  </section>
 
-    <form id="comment-form" class="comment-form" autocomplete="off">
-      <h3>Dated comment</h3>
+  <section class="panel" aria-labelledby="comment-heading">
+    <div class="panel-head">
+      <h2 id="comment-heading">Dated comment</h2>
+    </div>
+    <p class="muted">Track what happened, with a date, so you can look back later.</p>
+    <form id="comment-form" autocomplete="off">
       <div class="field-row">
         <label class="field date-field">
           <span>Date</span>
@@ -82,15 +88,6 @@
         <button type="submit" class="button ghost">Add comment</button>
       </div>
     </form>
-  </section>
-
-  <section class="panel wide" aria-labelledby="board-heading">
-    <div class="panel-head">
-      <h2 id="board-heading">Next step in each category</h2>
-      <span class="pill" id="board-count">&mdash;</span>
-    </div>
-    <p class="muted">Look here first. One highlighted next step per category, so nothing is skipped.</p>
-    <div id="board" class="board"></div>
   </section>
 
   <section class="panel wide" aria-labelledby="activity-heading">

@@ -53,6 +53,7 @@ class PageTests(WebAppTestCase):
         html = body.decode("utf-8")
         self.assertIn("Task Planner", html)
         self.assertIn("Next step in each category", html)
+        self.assertLess(html.index("Next step in each category"), html.index("Add a step"))
         self.assertIn("text/html", headers["Content-Type"])
 
         for path, expected in [("/app.js", "javascript"), ("/app.css", "text/css")]:

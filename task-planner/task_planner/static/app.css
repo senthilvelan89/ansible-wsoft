@@ -94,7 +94,6 @@ main {
 }
 
 .panel.wide { grid-column: 1 / -1; }
-.due-strip { grid-column: 1 / -1; }
 
 .panel-head {
   display: flex;
@@ -163,8 +162,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 .hint { color: var(--muted); font-size: 12px; }
-.comment-form { margin-top: 22px; border-top: 1px solid var(--border); padding-top: 16px; }
-.comment-form h3 { margin-bottom: 12px; }
+.due-soon { margin: 10px 0 4px; }
 
 .button {
   font: inherit;

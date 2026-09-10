@@ -308,9 +308,6 @@ async function loadState() {
   $("status-note").textContent =
     `${stats.with_next_step} of ${stats.categories} categories have a next step · ${stats.missing_next_step} missing · ${stats.overdue} overdue`;
   $("port-note").textContent = `port ${data.port || 8766}`;
-  $("due-count").textContent = `${data.due_soon.length} dated`;
-  $("due-count").classList.toggle("danger", stats.overdue > 0);
-  $("due-count").classList.toggle("warn", stats.overdue === 0 && stats.due_today > 0);
   $("board-count").textContent = `${stats.open_tasks} open`;
 
   fillCategorySelects(state.categories, $("field-category").value);
