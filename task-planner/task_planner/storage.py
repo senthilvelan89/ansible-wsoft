@@ -21,14 +21,7 @@ from .parsing import (
 SCHEMA_VERSION = 1
 
 DEFAULT_CATEGORIES = (
-    "Career",
-    "Property",
-    "Family",
-    "Admin",
     "Finance",
-    "Home",
-    "Health",
-    "Personal",
 )
 
 OPEN = "open"

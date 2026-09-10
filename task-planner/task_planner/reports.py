@@ -52,7 +52,7 @@ def due_label(task: Task, reference=None) -> str:
 
 def render_board(categories: Sequence[CategoryBoard], reference=None) -> str:
     if not categories:
-        return "No categories yet. Add one with `tasks categories add Career`."
+        return "No categories yet. Add one with `tasks categories add Work`."
 
     ref = reference or today()
     blocks = []

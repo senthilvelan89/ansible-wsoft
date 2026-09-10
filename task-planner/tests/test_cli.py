@@ -30,7 +30,7 @@ class BoardCommandTests(CliTestCase):
         code, out, _ = self.run_cli()
         self.assertEqual(code, 0)
         self.assertIn("Next step in each category", out)
-        self.assertIn("Family", out)
+        self.assertIn("Finance", out)
 
     def test_add_done_and_comment(self):
         code, out, err = self.run_cli("add", "Book school tour", "-c", "Family", "-d", "2026-09-12")
@@ -101,5 +101,5 @@ class ResolveCategoryTests(unittest.TestCase):
     def test_prefix_match(self):
         with tempfile.TemporaryDirectory() as directory:
             database = Database(Path(directory) / "tasks.db")
-            self.assertEqual(cli._resolve_category(database, "fam"), "Family")
-            self.assertEqual(cli._resolve_category(database, "CAREER"), "Career")
+            self.assertEqual(cli._resolve_category(database, "fin"), "Finance")
+            self.assertEqual(cli._resolve_category(database, "FINANCE"), "Finance")

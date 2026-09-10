@@ -20,8 +20,14 @@ class DatabaseTestCase(unittest.TestCase):
 class CategoryTests(DatabaseTestCase):
     def test_default_categories_exist(self):
         names = [category.name for category in self.db.categories()]
-        self.assertIn("Family", names)
-        self.assertIn("Career", names)
+        self.assertEqual(names, ["Finance"])
+        self.assertNotIn("Career", names)
+        self.assertNotIn("Property", names)
+        self.assertNotIn("Family", names)
+        self.assertNotIn("Admin", names)
+        self.assertNotIn("Home", names)
+        self.assertNotIn("Health", names)
+        self.assertNotIn("Personal", names)
 
     def test_add_and_rename_category(self):
         created = self.db.add_category("School")
@@ -32,9 +38,10 @@ class CategoryTests(DatabaseTestCase):
 
     def test_duplicate_category_is_rejected(self):
         with self.assertRaises(StorageError):
-            self.db.add_category("Family")
+            self.db.add_category("Finance")
 
     def test_delete_category_with_open_tasks_requires_move(self):
+        self.db.add_category("Admin")
         self.db.add_task("Call admissions", "Family")
         with self.assertRaises(StorageError):
             self.db.delete_category("Family")
@@ -148,10 +155,11 @@ class BoardStatsTests(DatabaseTestCase):
         self.db.add_task("Overdue", "Admin", due_on="2020-01-01")
         self.db.add_task("Soon", "Finance", due_on=dt.date.today())
         self.db.add_task("No date", "Home")
+        self.db.add_category("Work")
         stats = self.db.stats()
         self.assertEqual(stats["open_tasks"], 3)
         self.assertEqual(stats["with_next_step"], 3)
-        self.assertGreaterEqual(stats["missing_next_step"], 1)
+        self.assertEqual(stats["missing_next_step"], 1)
         self.assertEqual(stats["overdue"], 1)
         self.assertEqual(stats["due_today"], 1)
         due = self.db.due_soon(days=7)

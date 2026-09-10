@@ -81,8 +81,12 @@ echo "alias tasks='$(pwd)/tasks'" >> ~/.zshrc
 source ~/.zshrc
 ```
 
-Eight starter categories are created for you: Career, Property, Family, Admin,
-Finance, Home, Health and Personal. Add or rename them however you like.
+Finance is created for you. Add the rest of your work categories yourself so the
+board only shows what you actually run:
+
+```bash
+./tasks categories add Work
+```
 
 ---
 

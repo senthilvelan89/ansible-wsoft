@@ -76,7 +76,8 @@ class SecurityTests(WebAppTestCase):
         )
         self.assertEqual(status, 403)
         self.assertIn(GUARD_HEADER, payload["error"])
-        self.assertIsNone(self.db.next_step("Family"))
+        self.assertIsNone(self.db.get_category("Family"))
+        self.assertIsNone(self.db.next_step("Finance"))
 
     def test_non_local_host_header_is_rejected(self):
         status, payload = self.json_request("/api/state", headers={"Host": "evil.example.com"})
