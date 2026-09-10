@@ -133,7 +133,29 @@
       <h2>Food orders</h2>
       <span class="pill" id="orders-profit-pill">&mdash;</span>
     </div>
-    <p class="muted">Create an order, record money received, then add every cost for that order. Profit is income minus costs.</p>
+    <p class="muted">Create an order, record money received, then add every cost for that order. Profit is income minus costs. A slice of income is set aside for annual rates, ABN and registration &mdash; that is a reserve, not an order cost.</p>
+
+    <div class="reserve-card" id="overhead-card">
+      <div>
+        <h3>Annual rates, ABN &amp; registration</h3>
+        <p class="muted" id="overhead-summary"></p>
+      </div>
+      <div class="reserve-progress">
+        <div class="reserve-progress-bar" aria-hidden="true"><span id="overhead-bar"></span></div>
+        <p class="muted" id="overhead-progress"></p>
+      </div>
+      <form id="overhead-form" class="create-order reserve-form" autocomplete="off">
+        <label class="field">
+          <span>Annual amount</span>
+          <input type="text" inputmode="decimal" id="overhead-annual" required>
+        </label>
+        <label class="field">
+          <span>Expected orders / month</span>
+          <input type="text" inputmode="decimal" id="overhead-monthly" required>
+        </label>
+        <button type="submit" class="button ghost">Update reserve</button>
+      </form>
+    </div>
 
     <form id="create-order-form" class="create-order" autocomplete="off">
       <label class="field grow">
@@ -163,6 +185,7 @@
       <span class="pill" id="order-profit-pill">&mdash;</span>
     </div>
     <p class="muted" id="order-meta"></p>
+    <p class="muted" id="order-overhead-note"></p>
 
     <div class="stat-grid" id="order-stats"></div>
     <div id="order-cost-bars" class="bars compact"></div>

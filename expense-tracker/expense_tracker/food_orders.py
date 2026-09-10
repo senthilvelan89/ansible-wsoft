@@ -2,14 +2,16 @@
 
 This is a separate ledger from personal expenses. Each order has money
 received (income), costs under order-specific categories, and optional
-labour hours. Profit is income minus costs.
+labour hours. Profit is income minus costs. A configurable share of
+income is set aside for annual council rates, ABN and business
+registration so that money is reserved without distorting order costing.
 """
 
 from __future__ import annotations
 
 import datetime as dt
-from dataclasses import dataclass
-from typing import Dict, List, Optional
+from dataclasses import dataclass, replace
+from typing import Dict, List, Optional, Tuple
 
 from .parsing import (
     ParseError,
@@ -19,6 +21,7 @@ from .parsing import (
     parse_amount,
     parse_date,
     parse_hours,
+    today,
 )
 
 INCOME_KIND = "income"
@@ -36,6 +39,12 @@ DEFAULT_ORDER_CATEGORIES = (
     "Delivery",
     "Packaging",
 )
+
+# Yearly council rates, ABN and business registration. Funded by setting
+# aside a slice of each order's income instead of booking a fake cost line.
+DEFAULT_ANNUAL_OVERHEAD_CENTS = 120000  # $1,200
+DEFAULT_MONTHLY_ORDER_INCOME_CENTS = 120000  # assumed $1,200 of orders / month
+OVERHEAD_LABEL = "council rates, ABN and business registration"
 
 _CATEGORY_ALIASES = {
     "groceries": "Grocery",
@@ -94,6 +103,7 @@ class FoodOrder:
     hours: float = 0.0
     income_count: int = 0
     expense_count: int = 0
+    overhead_reserve_cents: int = 0
     created_at: str = ""
     updated_at: str = ""
     entries: Optional[List[OrderEntry]] = None
@@ -103,8 +113,13 @@ class FoodOrder:
     def profit_cents(self) -> int:
         return self.income_cents - self.expense_cents
 
+    @property
+    def profit_after_reserve_cents(self) -> int:
+        return self.profit_cents - self.overhead_reserve_cents
+
     def to_dict(self, symbol: str = "$") -> Dict[str, object]:
         profit = self.profit_cents
+        after_reserve = self.profit_after_reserve_cents
         payload = {
             "id": self.id,
             "name": self.name,
@@ -116,6 +131,10 @@ class FoodOrder:
             "expense_display": format_amount(self.expense_cents, symbol),
             "profit_cents": profit,
             "profit_display": format_amount(profit, symbol),
+            "overhead_reserve_cents": self.overhead_reserve_cents,
+            "overhead_reserve_display": format_amount(self.overhead_reserve_cents, symbol),
+            "profit_after_reserve_cents": after_reserve,
+            "profit_after_reserve_display": format_amount(after_reserve, symbol),
             "hours": self.hours,
             "hours_display": format_hours(self.hours),
             "income_count": self.income_count,
@@ -181,6 +200,85 @@ class FoodOrderMixin:
             [(name, stamp) for name in DEFAULT_ORDER_CATEGORIES],
         )
         self._copy_tagged_expenses(connection, stamp)
+
+    def overhead_amounts(self) -> Tuple[int, int]:
+        annual = _meta_cents(
+            self.get_setting("annual_overhead_cents"), DEFAULT_ANNUAL_OVERHEAD_CENTS
+        )
+        monthly = _meta_cents(
+            self.get_setting("expected_monthly_order_income_cents"),
+            DEFAULT_MONTHLY_ORDER_INCOME_CENTS,
+        )
+        if monthly <= 0:
+            monthly = DEFAULT_MONTHLY_ORDER_INCOME_CENTS
+        return annual, monthly
+
+    def set_overhead_amounts(self, annual=None, monthly=None) -> None:
+        if annual is not None:
+            cents = parse_amount(annual)
+            if cents < 0:
+                raise ParseError("Annual overhead cannot be negative")
+            self.set_setting("annual_overhead_cents", str(cents))
+        if monthly is not None:
+            cents = parse_amount(monthly)
+            if cents <= 0:
+                raise ParseError("Expected monthly order income must be greater than zero")
+            self.set_setting("expected_monthly_order_income_cents", str(cents))
+
+    def overhead_snapshot(self, symbol: str = "$", year: Optional[int] = None) -> Dict[str, object]:
+        year = year or today().year
+        annual, monthly = self.overhead_amounts()
+        monthly_reserve = int(round(annual / 12.0)) if annual else 0
+        rate = (annual / 12.0 / monthly) if monthly else 0.0
+        start = dt.date(year, 1, 1)
+        end = dt.date(year, 12, 31)
+        ytd = sum(
+            order.overhead_reserve_cents
+            for order in self.list_food_orders(start=start, end=end)
+        )
+        remaining = max(0, annual - ytd)
+        progress = min(1.0, ytd / annual) if annual else 1.0
+        rate_display = "%.2f%%" % (rate * 100)
+        return {
+            "label": OVERHEAD_LABEL,
+            "year": year,
+            "annual_cents": annual,
+            "annual_display": format_amount(annual, symbol),
+            "expected_monthly_income_cents": monthly,
+            "expected_monthly_income_display": format_amount(monthly, symbol),
+            "monthly_reserve_cents": monthly_reserve,
+            "monthly_reserve_display": format_amount(monthly_reserve, symbol),
+            "rate": rate,
+            "rate_display": rate_display,
+            "ytd_reserved_cents": ytd,
+            "ytd_reserved_display": format_amount(ytd, symbol),
+            "remaining_cents": remaining,
+            "remaining_display": format_amount(remaining, symbol),
+            "progress": progress,
+            "summary": (
+                "You pay %s a year for %s. With %s of orders each month, "
+                "set aside %s per month (%s of income) so the year is covered."
+                % (
+                    format_amount(annual, symbol),
+                    OVERHEAD_LABEL,
+                    format_amount(monthly, symbol),
+                    format_amount(monthly_reserve, symbol),
+                    rate_display,
+                )
+            ),
+        }
+
+    def _with_reserves(self, orders: List[FoodOrder]) -> List[FoodOrder]:
+        annual, monthly = self.overhead_amounts()
+        return [
+            replace(
+                order,
+                overhead_reserve_cents=overhead_reserve_cents(
+                    order.income_cents, annual, monthly
+                ),
+            )
+            for order in orders
+        ]
 
     def _copy_tagged_expenses(self, connection, stamp: str) -> None:
         already = connection.execute(
@@ -311,7 +409,7 @@ class FoodOrderMixin:
         )
         with self._connect() as connection:
             rows = connection.execute(query, params).fetchall()
-        return [_row_to_food_order(row) for row in rows]
+        return self._with_reserves([_row_to_food_order(row) for row in rows])
 
     def get_food_order(self, order_id: int, with_entries: bool = True) -> FoodOrder:
         matches = [order for order in self.list_food_orders() if order.id == int(order_id)]
@@ -354,6 +452,7 @@ class FoodOrderMixin:
             hours=order.hours,
             income_count=order.income_count,
             expense_count=order.expense_count,
+            overhead_reserve_cents=order.overhead_reserve_cents,
             created_at=order.created_at,
             updated_at=order.updated_at,
             entries=entries,
@@ -535,6 +634,28 @@ class FoodOrderMixin:
                 (_now(), current.order_id),
             )
         return True
+
+
+def overhead_reserve_cents(income_cents: int, annual_cents: int, monthly_income_cents: int) -> int:
+    """Share of this order's income to set aside for annual overhead.
+
+    With $1,200/year overhead and $1,200/month of orders, that is $100 per
+    month, or one twelfth of the order's income.
+    """
+
+    if income_cents <= 0 or annual_cents <= 0 or monthly_income_cents <= 0:
+        return 0
+    return int(round(income_cents * annual_cents / (12.0 * monthly_income_cents)))
+
+
+def _meta_cents(raw, default: int) -> int:
+    if raw is None or raw == "":
+        return default
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return value if value >= 0 else default
 
 
 def _map_order_category(name: str) -> str:

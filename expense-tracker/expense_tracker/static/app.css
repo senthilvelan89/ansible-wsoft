@@ -78,9 +78,33 @@ h3 { font-size: 14px; }
 }
 .create-order .button { margin-bottom: 12px; }
 
+.reserve-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: var(--bg);
+  margin: 4px 0 18px;
+  display: grid;
+  gap: 12px;
+}
+.reserve-progress-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.reserve-progress-bar span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: 999px;
+}
+.reserve-form { margin: 0; }
+
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
   margin: 16px 0 18px;
 }

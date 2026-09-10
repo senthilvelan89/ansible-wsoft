@@ -193,6 +193,14 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         help="how many months of history to keep (default: 12)",
     )
+    config.add_argument(
+        "--annual-overhead",
+        help="yearly amount to set aside for council rates, ABN and business registration (default: 1200)",
+    )
+    config.add_argument(
+        "--monthly-order-income",
+        help="expected food-order income per month, used to size the monthly reserve (default: 1200)",
+    )
     config.set_defaults(handler=command_config)
 
     return parser
@@ -463,6 +471,14 @@ def command_orders(args, database: Database) -> int:
     if action == "show":
         order = database.get_food_order(args.id)
         print(render_orders([order], symbol, title=order.name))
+        print(
+            "Set aside for %s: %s. Profit after reserve: %s"
+            % (
+                database.overhead_snapshot(symbol)["label"],
+                format_amount(order.overhead_reserve_cents, symbol),
+                format_amount(order.profit_after_reserve_cents, symbol),
+            )
+        )
         if order.entries:
             print()
             rows = []
@@ -492,8 +508,13 @@ def command_orders(args, database: Database) -> int:
         )
         order = database.get_food_order(args.id, with_entries=False)
         print(
-            "Recorded income %s. Order profit is now %s"
-            % (format_amount(entry.amount_cents, symbol), format_amount(order.profit_cents, symbol))
+            "Recorded income %s. Order profit is now %s; set aside %s (after reserve %s)"
+            % (
+                format_amount(entry.amount_cents, symbol),
+                format_amount(order.profit_cents, symbol),
+                format_amount(order.overhead_reserve_cents, symbol),
+                format_amount(order.profit_after_reserve_cents, symbol),
+            )
         )
         return 0
 
@@ -529,6 +550,18 @@ def command_orders(args, database: Database) -> int:
         print(json.dumps([order.to_dict(symbol) for order in orders], indent=2))
         return 0
     print(render_orders(orders, symbol, title="Food orders (%s)" % describe_range(start, end)))
+    overhead = database.overhead_snapshot(symbol)
+    print()
+    print(overhead["summary"])
+    print(
+        "%s reserved so far: %s of %s (%s still to fund)."
+        % (
+            overhead["year"],
+            overhead["ytd_reserved_display"],
+            overhead["annual_display"],
+            overhead["remaining_display"],
+        )
+    )
     return 0
 
 
@@ -615,9 +648,16 @@ def command_config(args, database: Database) -> int:
             raise ParseError("--retention-months must be at least 1")
         database.set_setting("retention_months", str(args.retention_months))
         changed = True
+    if getattr(args, "annual_overhead", None):
+        database.set_overhead_amounts(annual=args.annual_overhead)
+        changed = True
+    if getattr(args, "monthly_order_income", None):
+        database.set_overhead_amounts(monthly=args.monthly_order_income)
+        changed = True
 
     span = database.date_span()
     totals = database.totals()
+    overhead = database.overhead_snapshot(database.currency_symbol)
     rows = [
         ["database", str(database.path)],
         ["archive", str(database.archive_path())],
@@ -625,6 +665,17 @@ def command_config(args, database: Database) -> int:
         ["retention", "%d months (keeping entries on or after %s)" % (
             database.retention_months,
             format_date(database.retention_cutoff()),
+        )],
+        ["annual overhead", "%s for %s" % (overhead["annual_display"], overhead["label"])],
+        ["monthly orders", "%s expected income" % overhead["expected_monthly_income_display"]],
+        ["monthly reserve", "%s (%s of order income)" % (
+            overhead["monthly_reserve_display"],
+            overhead["rate_display"],
+        )],
+        ["reserved this year", "%s of %s (%s still to fund)" % (
+            overhead["ytd_reserved_display"],
+            overhead["annual_display"],
+            overhead["remaining_display"],
         )],
         ["expenses", "%d recorded, total %s" % (
             totals.count,

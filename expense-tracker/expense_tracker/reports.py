@@ -129,30 +129,35 @@ def render_orders(orders, symbol: str = "$", title: str = "") -> str:
                 format_amount(order.income_cents, symbol),
                 format_amount(order.expense_cents, symbol),
                 format_amount(order.profit_cents, symbol),
+                format_amount(getattr(order, "overhead_reserve_cents", 0), symbol),
+                format_amount(getattr(order, "profit_after_reserve_cents", order.profit_cents), symbol),
                 format_hours(getattr(order, "hours", 0)),
             ]
         )
 
     table = render_table(
-        ["ORDER", "DATE", "INCOME", "EXPENSES", "PROFIT", "HOURS"],
+        ["ORDER", "DATE", "INCOME", "EXPENSES", "PROFIT", "SET ASIDE", "AFTER RESERVE", "HOURS"],
         rows,
-        ["left", "left", "right", "right", "right", "right"],
+        ["left", "left", "right", "right", "right", "right", "right", "right"],
     )
     income = sum(order.income_cents for order in orders)
     cost = sum(order.expense_cents for order in orders)
     hours = sum(getattr(order, "hours", 0) for order in orders)
+    reserve = sum(getattr(order, "overhead_reserve_cents", 0) for order in orders)
     parts = []
     if title:
         parts.append(title)
     parts.append(table)
     parts.append("")
     parts.append(
-        "%d order(s): income %s, expenses %s, profit %s, labour %s hours"
+        "%d order(s): income %s, expenses %s, profit %s, set aside %s, after reserve %s, labour %s hours"
         % (
             len(orders),
             format_amount(income, symbol),
             format_amount(cost, symbol),
             format_amount(income - cost, symbol),
+            format_amount(reserve, symbol),
+            format_amount(income - cost - reserve, symbol),
             format_hours(hours),
         )
     )

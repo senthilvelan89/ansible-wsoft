@@ -245,27 +245,28 @@ def build_handler(database: Database):
                     )
                 raise ApiError("Method not allowed", HTTPStatus.METHOD_NOT_ALLOWED)
 
+            if path == "/api/overhead":
+                if method == "GET":
+                    return self._send_json(database.overhead_snapshot(symbol))
+                if method == "PATCH":
+                    payload = self._read_json()
+                    annual = payload.get("annual_overhead", payload.get("annual"))
+                    monthly = payload.get(
+                        "monthly_order_income", payload.get("expected_monthly_income")
+                    )
+                    if annual is None and monthly is None:
+                        raise ApiError("Provide annual_overhead and/or monthly_order_income")
+                    database.set_overhead_amounts(annual=annual, monthly=monthly)
+                    return self._send_json(database.overhead_snapshot(symbol))
+                raise ApiError("Method not allowed", HTTPStatus.METHOD_NOT_ALLOWED)
+
             if path == "/api/food-orders":
                 if method == "GET":
                     start, end = _range_from_query(query)
                     orders = database.list_food_orders(
                         start=start, end=end, search=_first(query, "search")
                     )
-                    income = sum(order.income_cents for order in orders)
-                    cost = sum(order.expense_cents for order in orders)
-                    hours = sum(order.hours for order in orders)
-                    return self._send_json(
-                        {
-                            "orders": [order.to_dict(symbol) for order in orders],
-                            "income_cents": income,
-                            "income_display": format_amount(income, symbol),
-                            "expense_cents": cost,
-                            "expense_display": format_amount(cost, symbol),
-                            "profit_cents": income - cost,
-                            "profit_display": format_amount(income - cost, symbol),
-                            "hours": hours,
-                        }
-                    )
+                    return self._send_json(_order_list_payload(database, orders, symbol))
                 if method == "POST":
                     payload = self._read_json()
                     order = database.create_food_order(
@@ -282,19 +283,7 @@ def build_handler(database: Database):
             if path == "/api/orders" and method == "GET":
                 start, end = _range_from_query(query)
                 orders = database.list_food_orders(start=start, end=end)
-                income = sum(order.income_cents for order in orders)
-                cost = sum(order.expense_cents for order in orders)
-                return self._send_json(
-                    {
-                        "orders": [order.to_dict(symbol) for order in orders],
-                        "income_cents": income,
-                        "income_display": format_amount(income, symbol),
-                        "expense_cents": cost,
-                        "expense_display": format_amount(cost, symbol),
-                        "profit_cents": income - cost,
-                        "profit_display": format_amount(income - cost, symbol),
-                    }
-                )
+                return self._send_json(_order_list_payload(database, orders, symbol))
 
             raise ApiError("Not found", HTTPStatus.NOT_FOUND)
 
@@ -311,6 +300,7 @@ def build_handler(database: Database):
                     order = database.get_food_order(order_id)
                     payload = order.to_dict(symbol)
                     payload["categories"] = database.order_categories()
+                    payload["overhead"] = database.overhead_snapshot(symbol)
                     return self._send_json(payload)
                 if method == "PATCH":
                     payload = self._read_json()
@@ -426,6 +416,29 @@ def _range_from_query(query: Dict[str, list]) -> Tuple[Optional[dt.date], Option
         year=_first(query, "year"),
         days=_int(query, "days"),
     )
+
+
+def _order_list_payload(database: Database, orders, symbol: str) -> Dict[str, Any]:
+    income = sum(order.income_cents for order in orders)
+    cost = sum(order.expense_cents for order in orders)
+    hours = sum(order.hours for order in orders)
+    reserve = sum(order.overhead_reserve_cents for order in orders)
+    after = income - cost - reserve
+    return {
+        "orders": [order.to_dict(symbol) for order in orders],
+        "income_cents": income,
+        "income_display": format_amount(income, symbol),
+        "expense_cents": cost,
+        "expense_display": format_amount(cost, symbol),
+        "profit_cents": income - cost,
+        "profit_display": format_amount(income - cost, symbol),
+        "overhead_reserve_cents": reserve,
+        "overhead_reserve_display": format_amount(reserve, symbol),
+        "profit_after_reserve_cents": after,
+        "profit_after_reserve_display": format_amount(after, symbol),
+        "hours": hours,
+        "overhead": database.overhead_snapshot(symbol),
+    }
 
 
 def _state_payload(database: Database, query: Dict[str, list]) -> Dict[str, Any]:
