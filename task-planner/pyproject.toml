@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "task-planner"
+version = "1.0.0"
+description = "Local-first task planner that highlights the next step in each category"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = []
+
+[project.scripts]
+tasks = "task_planner.cli:main"
+
+[tool.setuptools]
+packages = ["task_planner"]
+
+[tool.setuptools.package-data]
+task_planner = ["static/*"]
