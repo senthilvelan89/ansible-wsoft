@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Task Planner</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">✓</span>
+    <div>
+      <h1>Task Planner</h1>
+      <p class="subtitle" id="status-note">Loading&hellip;</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <span class="pill" id="port-note">port 8766</span>
+  </div>
+</header>
+
+<main>
+  <section class="panel due-strip" aria-labelledby="due-heading">
+    <div class="panel-head">
+      <h2 id="due-heading">By date</h2>
+      <span class="pill" id="due-count">&mdash;</span>
+    </div>
+    <p class="muted">Open next steps and queued work with a due date, so nothing dated slips past.</p>
+    <div id="due-soon"></div>
+  </section>
+
+  <section class="panel entry" aria-labelledby="add-heading">
+    <div class="panel-head">
+      <h2 id="add-heading">Add a step</h2>
+    </div>
+    <form id="task-form" autocomplete="off">
+      <label class="field">
+        <span>Category</span>
+        <div class="category-row">
+          <select id="field-category" required></select>
+          <button type="button" class="button ghost small" id="new-category">+ New</button>
+        </div>
+      </label>
+      <label class="field">
+        <span>Next step</span>
+        <input type="text" id="field-title" placeholder="What needs to happen next?" required maxlength="240">
+      </label>
+      <div class="field-row">
+        <label class="field date-field">
+          <span>Due date <em>(optional)</em></span>
+          <input type="date" id="field-due">
+        </label>
+        <label class="check">
+          <input type="checkbox" id="field-as-next">
+          <span>Make this the next step</span>
+        </label>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="button primary">Queue step</button>
+        <span class="hint">Queued steps wait behind the current next step so you cannot skip them.</span>
+      </div>
+    </form>
+
+    <form id="comment-form" class="comment-form" autocomplete="off">
+      <h3>Dated comment</h3>
+      <div class="field-row">
+        <label class="field date-field">
+          <span>Date</span>
+          <input type="date" id="comment-date" required>
+        </label>
+        <label class="field grow">
+          <span>On category</span>
+          <select id="comment-category"></select>
+        </label>
+      </div>
+      <label class="field">
+        <span>Comment</span>
+        <input type="text" id="comment-body" placeholder="Called, waiting, blocked&hellip;" required maxlength="2000">
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="button ghost">Add comment</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel wide" aria-labelledby="board-heading">
+    <div class="panel-head">
+      <h2 id="board-heading">Next step in each category</h2>
+      <span class="pill" id="board-count">&mdash;</span>
+    </div>
+    <p class="muted">Look here first. One highlighted next step per category, so nothing is skipped.</p>
+    <div id="board" class="board"></div>
+  </section>
+
+  <section class="panel wide" aria-labelledby="activity-heading">
+    <div class="panel-head">
+      <h2 id="activity-heading">Comments by date</h2>
+    </div>
+    <div id="activity"></div>
+  </section>
+
+  <section class="panel wide hidden" id="detail-panel" aria-labelledby="detail-heading">
+    <div class="panel-head">
+      <h2 id="detail-heading">Category</h2>
+      <button type="button" class="button ghost small" id="close-detail">Close</button>
+    </div>
+    <div id="detail-queue"></div>
+    <h3 class="section-title">Comments</h3>
+    <div id="detail-comments"></div>
+  </section>
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="/app.js"></script>
+</body>
+</html>
