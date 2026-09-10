@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import List, Optional, Sequence
 
 from .parsing import format_amount, format_date
-from .storage import Bucket, Expense
+from .storage import Bucket, Expense, OrderProfit
 
 BAR_CHARACTER = "\u2588"
 
@@ -43,8 +43,12 @@ def render_expenses(expenses: Sequence[Expense], symbol: str = "$", show_note: b
         return "No expenses recorded for this range."
 
     include_note = show_note and any(expense.note for expense in expenses)
+    include_order = any(expense.order_name for expense in expenses)
     headers = ["ID", "DATE", "ITEM", "CATEGORY", "AMOUNT"]
     aligns = ["right", "left", "left", "left", "right"]
+    if include_order:
+        headers.append("ORDER")
+        aligns.append("left")
     if include_note:
         headers.append("NOTE")
         aligns.append("left")
@@ -58,6 +62,8 @@ def render_expenses(expenses: Sequence[Expense], symbol: str = "$", show_note: b
             expense.category,
             format_amount(expense.amount_cents, symbol),
         ]
+        if include_order:
+            row.append(expense.order_name)
         if include_note:
             row.append(expense.note)
         rows.append(row)
@@ -106,4 +112,40 @@ def render_summary(
     parts.append(table)
     parts.append("")
     parts.append("TOTAL: %s across %d expense(s)" % (format_amount(total, symbol), sum(b.count for b in buckets)))
+    return "\n".join(parts)
+
+
+def render_orders(orders: Sequence[OrderProfit], symbol: str = "$", title: str = "") -> str:
+    if not orders:
+        return "%sNo food orders recorded for this range." % (title + "\n" if title else "")
+
+    rows: List[List[str]] = []
+    for order in orders:
+        rows.append(
+            [
+                order.name,
+                format_date(order.last_date) if order.last_date else "",
+                format_amount(order.income_cents, symbol),
+                format_amount(order.expense_cents, symbol),
+                format_amount(order.profit_cents, symbol),
+                str(order.income_count + order.expense_count),
+            ]
+        )
+
+    table = render_table(
+        ["ORDER", "LAST DATE", "INCOME", "EXPENSES", "PROFIT", "ENTRIES"],
+        rows,
+        ["left", "left", "right", "right", "right", "right"],
+    )
+    income = sum(order.income_cents for order in orders)
+    cost = sum(order.expense_cents for order in orders)
+    parts = []
+    if title:
+        parts.append(title)
+    parts.append(table)
+    parts.append("")
+    parts.append(
+        "%d order(s): income %s, expenses %s, profit %s"
+        % (len(orders), format_amount(income, symbol), format_amount(cost, symbol), format_amount(income - cost, symbol))
+    )
     return "\n".join(parts)

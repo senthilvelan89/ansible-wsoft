@@ -253,8 +253,8 @@ class ConfigCommandTests(CliTestCase):
 class NightCommandTests(CliTestCase):
     def test_interactive_session_records_entries(self):
         script = [
-            "Coffee", "4.50", "Dining", "",
-            "Groceries", "62.10", "Groceries", "weekly shop",
+            "Coffee", "4.50", "Dining", "", "",
+            "Groceries", "62.10", "Groceries", "", "weekly shop",
             "",
         ]
         answers = iter(script)
@@ -269,7 +269,7 @@ class NightCommandTests(CliTestCase):
         self.assertEqual(self.db.list_expenses(category="Groceries")[0].note, "weekly shop")
 
     def test_bad_amount_is_reported_without_stopping(self):
-        answers = iter(["Coffee", "abc", "Dining", "", "Tea", "3", "Dining", "", ""])
+        answers = iter(["Coffee", "abc", "Dining", "", "", "Tea", "3", "Dining", "", "", ""])
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             with unittest.mock.patch("builtins.input", lambda *_: next(answers)):

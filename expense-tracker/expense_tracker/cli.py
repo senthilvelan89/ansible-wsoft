@@ -21,7 +21,7 @@ from .parsing import (
     resolve_range,
     today,
 )
-from .reports import render_expenses, render_summary, render_table
+from .reports import render_expenses, render_orders, render_summary, render_table
 from .storage import Database, StorageError
 
 PROGRAM = "expenses"
@@ -36,8 +36,9 @@ def build_parser() -> argparse.ArgumentParser:
             "Examples:\n"
             "  expenses night                       log everything you spent today, one line at a time\n"
             "  expenses add Coffee 4.50 Dining      log a single expense\n"
-            "  expenses add Petrol 60 Transport -d yesterday\n"
-            "  expenses summary --month this        spend per category this month\n"
+            "  expenses add \"Saturday biryani\" 120 Income --order \"Saturday biryani\"\n"
+            "  expenses add Chicken 35 Groceries --order \"Saturday biryani\"\n"
+            "  expenses orders --month this        profit per food order\n"
             "  expenses list --days 7               the last seven days of expenses\n"
             "  expenses web                         open the browser interface\n"
         ),
@@ -62,6 +63,7 @@ def build_parser() -> argparse.ArgumentParser:
     add.add_argument("amount", help="how much it cost, e.g. 42.30")
     add.add_argument("category", nargs="?", default="Other", help="category name (default: Other)")
     add.add_argument("-d", "--date", default="today", help="date of the expense (default: today)")
+    add.add_argument("-o", "--order", default="", help="food order this entry belongs to")
     add.add_argument("-n", "--note", default="", help="optional note")
     add.set_defaults(handler=command_add)
 
@@ -75,6 +77,7 @@ def build_parser() -> argparse.ArgumentParser:
     listing = add_command("list", aliases=["ls"], help="show recorded expenses")
     _add_range_arguments(listing)
     listing.add_argument("-c", "--category", help="only this category")
+    listing.add_argument("-o", "--order", help="only this food order")
     listing.add_argument("-s", "--search", help="match text in the item or note")
     listing.add_argument("-l", "--limit", type=int, help="show at most this many entries")
     listing.add_argument("--oldest-first", action="store_true", help="sort oldest to newest")
@@ -91,6 +94,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="what to group by (default: category)",
     )
     summary.add_argument("-c", "--category", help="only this category")
+    summary.add_argument("-o", "--order", help="only this food order")
     summary.add_argument("-s", "--search", help="match text in the item or note")
     summary.add_argument("--json", action="store_true", help="print JSON instead of a table")
     summary.set_defaults(handler=command_summary)
@@ -101,6 +105,7 @@ def build_parser() -> argparse.ArgumentParser:
     edit.add_argument("-a", "--amount")
     edit.add_argument("-c", "--category")
     edit.add_argument("-d", "--date")
+    edit.add_argument("-o", "--order")
     edit.add_argument("-n", "--note")
     edit.set_defaults(handler=command_edit)
 
@@ -126,6 +131,15 @@ def build_parser() -> argparse.ArgumentParser:
     category_delete.set_defaults(action="delete")
     categories.set_defaults(handler=command_categories, action=None)
 
+    orders = add_command(
+        "orders",
+        help="income, expenses and profit grouped by food order",
+    )
+    _add_range_arguments(orders)
+    orders.add_argument("-o", "--order", help="only this food order")
+    orders.add_argument("--json", action="store_true", help="print JSON instead of a table")
+    orders.set_defaults(handler=command_orders)
+
     export = add_command("export", help="write expenses to CSV or JSON")
     _add_range_arguments(export)
     export.add_argument("-o", "--out", help="file to write (default: stdout)")
@@ -133,7 +147,7 @@ def build_parser() -> argparse.ArgumentParser:
     export.set_defaults(handler=command_export)
 
     importer = add_command("import", help="load expenses from a CSV file")
-    importer.add_argument("path", help="CSV with date,item,category,amount,note columns")
+    importer.add_argument("path", help="CSV with date,item,category,amount,order,note columns")
     importer.set_defaults(handler=command_import)
 
     prune = add_command(
@@ -194,19 +208,37 @@ def command_add(args, database: Database) -> int:
         category=_resolve_category(database, args.category),
         spent_on=args.date,
         note=args.note,
+        order_name=args.order,
     )
     symbol = database.currency_symbol
+    extras = []
+    if expense.order_name:
+        extras.append("order %s" % expense.order_name)
     print(
-        "Added #%d  %s  %s  %s  %s"
+        "Added #%d  %s  %s  %s  %s%s"
         % (
             expense.id,
             format_date(expense.spent_on),
             expense.item,
             expense.category,
             format_amount(expense.amount_cents, symbol),
+            ("  " + "  ".join(extras)) if extras else "",
         )
     )
-    day_total = database.totals(start=expense.spent_on, end=expense.spent_on)
+    if expense.order_name:
+        snapshot = database.get_order(expense.order_name)
+        if snapshot:
+            print(
+                "Order %s: income %s, expenses %s, profit %s"
+                % (
+                    snapshot.name,
+                    format_amount(snapshot.income_cents, symbol),
+                    format_amount(snapshot.expense_cents, symbol),
+                    format_amount(snapshot.profit_cents, symbol),
+                )
+            )
+            return 0
+    day_total = database.totals(start=expense.spent_on, end=expense.spent_on, exclude_income=True)
     print(
         "Total for %s: %s"
         % (format_date(expense.spent_on), format_amount(day_total.total_cents, symbol))
@@ -225,6 +257,7 @@ def command_night(args, database: Database) -> int:
 
     added = 0
     last_category = None
+    last_order = ""
     while True:
         try:
             item = input("Item (blank to finish): ").strip()
@@ -239,6 +272,8 @@ def command_night(args, database: Database) -> int:
             default_category = last_category or "Other"
             prompt = "  Category [%s]: " % default_category
             category_text = input(prompt).strip() or default_category
+            order_prompt = "  Food order [%s]: " % last_order if last_order else "  Food order (blank if none): "
+            order_text = input(order_prompt).strip() or last_order
             note = input("  Note (optional): ").strip()
         except (EOFError, KeyboardInterrupt):
             print()
@@ -252,6 +287,7 @@ def command_night(args, database: Database) -> int:
                 category=category,
                 spent_on=date_value,
                 note=note,
+                order_name=order_text,
             )
         except (ParseError, StorageError) as error:
             print("  Not saved: %s" % error)
@@ -259,6 +295,8 @@ def command_night(args, database: Database) -> int:
 
         added += 1
         last_category = expense.category
+        if expense.order_name:
+            last_order = expense.order_name
         print(
             "  Saved #%d %s under %s"
             % (expense.id, format_amount(expense.amount_cents, symbol), expense.category)
@@ -266,12 +304,12 @@ def command_night(args, database: Database) -> int:
 
     print()
     if added:
-        day_total = database.totals(start=date_value, end=date_value)
+        day_total = database.totals(start=date_value, end=date_value, exclude_income=True)
         print(
             "Recorded %d expense(s). Total for %s: %s"
             % (added, format_date(date_value), format_amount(day_total.total_cents, symbol))
         )
-        buckets = database.summary("category", start=date_value, end=date_value)
+        buckets = database.summary("category", start=date_value, end=date_value, exclude_income=True)
         print()
         print(render_summary(buckets, symbol, title="Spend by category today"))
     else:
@@ -286,6 +324,7 @@ def command_list(args, database: Database) -> int:
         end=end,
         category=_resolve_category(database, args.category) if args.category else None,
         search=args.search,
+        order_name=args.order,
         limit=args.limit,
         newest_first=not args.oldest_first,
     )
@@ -307,6 +346,8 @@ def command_summary(args, database: Database) -> int:
         end=end,
         category=_resolve_category(database, args.category) if args.category else None,
         search=args.search,
+        order_name=args.order,
+        exclude_income=args.by == "category" and not args.category,
     )
     symbol = database.currency_symbol
     if args.json:
@@ -337,6 +378,7 @@ def command_edit(args, database: Database) -> int:
         category=category,
         spent_on=args.date,
         note=args.note,
+        order_name=args.order,
     )
     symbol = database.currency_symbol
     print(
@@ -408,6 +450,32 @@ def command_categories(args, database: Database) -> int:
             ]
         )
     print(render_table(["CATEGORY", "ENTRIES", "TOTAL"], rows, ["left", "right", "right"]))
+    return 0
+
+
+def command_orders(args, database: Database) -> int:
+    start, end = _range_from_args(args)
+    orders = database.order_profits(start=start, end=end, order_name=args.order)
+    symbol = database.currency_symbol
+    if args.json:
+        payload = {
+            "range": {
+                "start": format_date(start) if start else None,
+                "end": format_date(end) if end else None,
+            },
+            "orders": [order.to_dict(symbol) for order in orders],
+            "income_cents": sum(order.income_cents for order in orders),
+            "expense_cents": sum(order.expense_cents for order in orders),
+            "profit_cents": sum(order.profit_cents for order in orders),
+        }
+        print(json.dumps(payload, indent=2))
+        return 0
+    title = "Food order profit (%s)" % describe_range(start, end)
+    print(render_orders(orders, symbol, title=title))
+    if args.order and orders:
+        entries = database.list_expenses(start=start, end=end, order_name=args.order, newest_first=False)
+        print()
+        print(render_expenses(entries, symbol))
     return 0
 
 

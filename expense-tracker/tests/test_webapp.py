@@ -196,7 +196,7 @@ class ExportTests(WebAppTestCase):
         self.assertIn("attachment", headers["Content-Disposition"])
 
         lines = body.decode("utf-8").strip().splitlines()
-        self.assertEqual(lines[0], "id,date,item,category,amount,note,created_at")
+        self.assertEqual(lines[0], "id,date,item,category,amount,order,note,created_at")
         self.assertIn("Coffee", lines[1])
 
 

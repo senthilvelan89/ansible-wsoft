@@ -151,15 +151,15 @@ def build_handler(database: Database):
                         end=end,
                         category=_first(query, "category"),
                         search=_first(query, "search"),
+                        order_name=_first(query, "order"),
                         limit=_int(query, "limit"),
                     )
+                    spend = sum(e.amount_cents for e in expenses if not e.is_income)
                     return self._send_json(
                         {
                             "expenses": [expense.to_dict(symbol) for expense in expenses],
-                            "total_cents": sum(e.amount_cents for e in expenses),
-                            "total_display": format_amount(
-                                sum(e.amount_cents for e in expenses), symbol
-                            ),
+                            "total_cents": spend,
+                            "total_display": format_amount(spend, symbol),
                         }
                     )
                 if method == "POST":
@@ -170,6 +170,7 @@ def build_handler(database: Database):
                         category=payload.get("category") or "Other",
                         spent_on=payload.get("date") or None,
                         note=payload.get("note", ""),
+                        order_name=payload.get("order_name") or payload.get("order") or "",
                     )
                     return self._send_json({"expense": expense.to_dict(symbol)}, HTTPStatus.CREATED)
                 raise ApiError("Method not allowed", HTTPStatus.METHOD_NOT_ALLOWED)
@@ -192,6 +193,7 @@ def build_handler(database: Database):
                         category=payload.get("category"),
                         spent_on=payload.get("date"),
                         note=payload.get("note"),
+                        order_name=payload["order_name"] if "order_name" in payload else payload.get("order"),
                     )
                     return self._send_json({"expense": expense.to_dict(symbol)})
                 raise ApiError("Method not allowed", HTTPStatus.METHOD_NOT_ALLOWED)
@@ -205,6 +207,8 @@ def build_handler(database: Database):
                     end=end,
                     category=_first(query, "category"),
                     search=_first(query, "search"),
+                    order_name=_first(query, "order"),
+                    exclude_income=group_by == "category" and not _first(query, "category"),
                 )
                 return self._send_json(
                     {
@@ -228,6 +232,28 @@ def build_handler(database: Database):
                         HTTPStatus.CREATED,
                     )
                 raise ApiError("Method not allowed", HTTPStatus.METHOD_NOT_ALLOWED)
+
+            if path == "/api/orders" and method == "GET":
+                start, end = _range_from_query(query)
+                orders = database.order_profits(
+                    start=start,
+                    end=end,
+                    order_name=_first(query, "order"),
+                    search=_first(query, "search"),
+                )
+                income = sum(order.income_cents for order in orders)
+                cost = sum(order.expense_cents for order in orders)
+                return self._send_json(
+                    {
+                        "orders": [order.to_dict(symbol) for order in orders],
+                        "income_cents": income,
+                        "income_display": format_amount(income, symbol),
+                        "expense_cents": cost,
+                        "expense_display": format_amount(cost, symbol),
+                        "profit_cents": income - cost,
+                        "profit_display": format_amount(income - cost, symbol),
+                    }
+                )
 
             raise ApiError("Not found", HTTPStatus.NOT_FOUND)
 
@@ -295,11 +321,19 @@ def _state_payload(database: Database, query: Dict[str, list]) -> Dict[str, Any]
     window_start = add_months(today(), -database.retention_months)
 
     day_expenses = database.list_expenses(start=reference, end=reference)
-    day_total = database.totals(start=reference, end=reference)
-    month_total = database.totals(start=month_start, end=month_end)
-    month_categories = database.summary("category", start=month_start, end=month_end)
-    monthly_trend = database.summary("month", start=window_start, end=today())
-    window_total = database.totals(start=window_start, end=today())
+    day_spend = database.totals(start=reference, end=reference, exclude_income=True)
+    day_income = database.totals(start=reference, end=reference, category="Income")
+    month_spend = database.totals(start=month_start, end=month_end, exclude_income=True)
+    month_income = database.totals(start=month_start, end=month_end, category="Income")
+    month_categories = database.summary(
+        "category", start=month_start, end=month_end, exclude_income=True
+    )
+    monthly_trend = database.summary(
+        "month", start=window_start, end=today(), exclude_income=True
+    )
+    window_spend = database.totals(start=window_start, end=today(), exclude_income=True)
+    month_orders = database.order_profits(start=month_start, end=month_end)
+    month_profit = sum(order.profit_cents for order in month_orders)
     span = database.date_span()
 
     return {
@@ -308,28 +342,36 @@ def _state_payload(database: Database, query: Dict[str, list]) -> Dict[str, Any]
         "today": format_date(today()),
         "date": format_date(reference),
         "categories": database.categories(),
+        "order_names": database.order_names(),
         "retention_months": database.retention_months,
         "retention_cutoff": format_date(database.retention_cutoff()),
         "database_path": str(database.path),
         "day": {
             "date": format_date(reference),
             "expenses": [expense.to_dict(symbol) for expense in day_expenses],
-            "total_cents": day_total.total_cents,
-            "total_display": format_amount(day_total.total_cents, symbol),
+            "total_cents": day_spend.total_cents,
+            "total_display": format_amount(day_spend.total_cents, symbol),
+            "income_cents": day_income.total_cents,
+            "income_display": format_amount(day_income.total_cents, symbol),
         },
         "month": {
             "start": format_date(month_start),
             "end": format_date(month_end),
             "label": reference.strftime("%B %Y"),
-            "total_cents": month_total.total_cents,
-            "total_display": format_amount(month_total.total_cents, symbol),
+            "total_cents": month_spend.total_cents,
+            "total_display": format_amount(month_spend.total_cents, symbol),
+            "income_cents": month_income.total_cents,
+            "income_display": format_amount(month_income.total_cents, symbol),
+            "profit_cents": month_profit,
+            "profit_display": format_amount(month_profit, symbol),
             "categories": [bucket.to_dict(symbol) for bucket in month_categories],
+            "orders": [order.to_dict(symbol) for order in month_orders],
         },
         "window": {
             "start": format_date(window_start),
             "end": format_date(today()),
-            "total_cents": window_total.total_cents,
-            "total_display": format_amount(window_total.total_cents, symbol),
+            "total_cents": window_spend.total_cents,
+            "total_display": format_amount(window_spend.total_cents, symbol),
             "months": [bucket.to_dict(symbol) for bucket in monthly_trend],
             "first_record": format_date(span[0]) if span else None,
             "last_record": format_date(span[1]) if span else None,

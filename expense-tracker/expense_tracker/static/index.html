@@ -41,7 +41,7 @@
       </div>
       <div class="field-row">
         <label class="field">
-          <span>Cost</span>
+          <span id="amount-label">Cost</span>
           <input type="text" inputmode="decimal" id="field-amount" placeholder="0.00" required>
         </label>
         <label class="field grow">
@@ -52,6 +52,11 @@
           </div>
         </label>
       </div>
+      <label class="field">
+        <span>Food order <em>(required for income, optional for costs)</em></span>
+        <input type="text" id="field-order" list="order-suggestions" placeholder="e.g. Saturday biryani" maxlength="120">
+        <datalist id="order-suggestions"></datalist>
+      </label>
       <label class="field">
         <span>Note <em>(optional)</em></span>
         <input type="text" id="field-note" placeholder="Anything worth remembering" maxlength="500">
@@ -80,6 +85,15 @@
     <h3 class="section-title">Last 12 months</h3>
     <p class="muted" id="window-total"></p>
     <div id="trend" class="trend"></div>
+  </section>
+
+  <section class="panel wide" aria-labelledby="orders-heading">
+    <div class="panel-head">
+      <h2 id="orders-heading">Food order profit</h2>
+      <span class="pill" id="orders-total">&mdash;</span>
+    </div>
+    <p class="muted" id="orders-label">Link income and costs with the same food order name to see profit.</p>
+    <div id="orders-table"></div>
   </section>
 
   <section class="panel wide" aria-labelledby="history-heading">
@@ -111,6 +125,10 @@
       <label class="field">
         <span>Category</span>
         <select id="filter-category"><option value="">All categories</option></select>
+      </label>
+      <label class="field">
+        <span>Food order</span>
+        <select id="filter-order"><option value="">All orders</option></select>
       </label>
       <label class="field grow">
         <span>Search</span>

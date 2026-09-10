@@ -22,7 +22,8 @@ from .parsing import (
     today,
 )
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+INCOME_CATEGORY = "Income"
 
 DEFAULT_CATEGORIES = (
     "Groceries",
@@ -36,10 +37,11 @@ DEFAULT_CATEGORIES = (
     "Travel",
     "Education",
     "Personal",
+    INCOME_CATEGORY,
     "Other",
 )
 
-EXPORT_COLUMNS = ("id", "date", "item", "category", "amount", "note", "created_at")
+EXPORT_COLUMNS = ("id", "date", "item", "category", "amount", "order", "note", "created_at")
 
 
 class StorageError(RuntimeError):
@@ -54,8 +56,13 @@ class Expense:
     category: str
     amount_cents: int
     note: str = ""
+    order_name: str = ""
     created_at: str = ""
     updated_at: str = ""
+
+    @property
+    def is_income(self) -> bool:
+        return is_income_category(self.category)
 
     def to_dict(self, symbol: str = "$") -> Dict[str, object]:
         return {
@@ -67,6 +74,8 @@ class Expense:
             "amount": self.amount_cents / 100,
             "amount_display": format_amount(self.amount_cents, symbol),
             "note": self.note,
+            "order_name": self.order_name,
+            "is_income": self.is_income,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }
@@ -87,6 +96,42 @@ class Bucket:
             "total": self.total_cents / 100,
             "total_display": format_amount(self.total_cents, symbol),
             "count": self.count,
+        }
+
+
+@dataclass(frozen=True)
+class OrderProfit:
+    """Income, costs and profit for one named food order."""
+
+    name: str
+    income_cents: int
+    expense_cents: int
+    income_count: int
+    expense_count: int
+    first_date: Optional[dt.date] = None
+    last_date: Optional[dt.date] = None
+
+    @property
+    def profit_cents(self) -> int:
+        return self.income_cents - self.expense_cents
+
+    def to_dict(self, symbol: str = "$") -> Dict[str, object]:
+        profit = self.profit_cents
+        return {
+            "name": self.name,
+            "income_cents": self.income_cents,
+            "income": self.income_cents / 100,
+            "income_display": format_amount(self.income_cents, symbol),
+            "expense_cents": self.expense_cents,
+            "expense": self.expense_cents / 100,
+            "expense_display": format_amount(self.expense_cents, symbol),
+            "profit_cents": profit,
+            "profit": profit / 100,
+            "profit_display": format_amount(profit, symbol),
+            "income_count": self.income_count,
+            "expense_count": self.expense_count,
+            "first_date": format_date(self.first_date) if self.first_date else None,
+            "last_date": format_date(self.last_date) if self.last_date else None,
         }
 
 
@@ -167,6 +212,7 @@ class Database:
                     category     TEXT    NOT NULL COLLATE NOCASE,
                     amount_cents INTEGER NOT NULL,
                     note         TEXT    NOT NULL DEFAULT '',
+                    order_name   TEXT    NOT NULL DEFAULT '',
                     created_at   TEXT    NOT NULL,
                     updated_at   TEXT    NOT NULL
                 );
@@ -175,24 +221,48 @@ class Database:
                     ON expenses (spent_on);
                 CREATE INDEX IF NOT EXISTS idx_expenses_category
                     ON expenses (category);
+                CREATE INDEX IF NOT EXISTS idx_expenses_order
+                    ON expenses (order_name);
                 """
             )
-            existing = connection.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone()
-            if existing is None:
-                stamp = _timestamp()
-                connection.executemany(
-                    "INSERT OR IGNORE INTO meta (key, value) VALUES (?, ?)",
-                    [
-                        ("schema_version", str(SCHEMA_VERSION)),
-                        ("currency_symbol", os.environ.get("EXPENSE_TRACKER_CURRENCY", "$")),
-                        ("retention_months", str(DEFAULT_RETENTION_MONTHS)),
-                        ("created_at", stamp),
-                    ],
-                )
-                connection.executemany(
-                    "INSERT OR IGNORE INTO categories (name, created_at) VALUES (?, ?)",
-                    [(name, stamp) for name in DEFAULT_CATEGORIES],
-                )
+            self._migrate(connection)
+
+    def _migrate(self, connection: sqlite3.Connection) -> None:
+        columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(expenses)").fetchall()
+        }
+        if "order_name" not in columns:
+            connection.execute(
+                "ALTER TABLE expenses ADD COLUMN order_name TEXT NOT NULL DEFAULT ''"
+            )
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_expenses_order ON expenses (order_name)"
+            )
+
+        stamp = _timestamp()
+        existing = connection.execute(
+            "SELECT value FROM meta WHERE key = 'schema_version'"
+        ).fetchone()
+        if existing is None:
+            connection.executemany(
+                "INSERT OR IGNORE INTO meta (key, value) VALUES (?, ?)",
+                [
+                    ("schema_version", str(SCHEMA_VERSION)),
+                    ("currency_symbol", os.environ.get("EXPENSE_TRACKER_CURRENCY", "$")),
+                    ("retention_months", str(DEFAULT_RETENTION_MONTHS)),
+                    ("created_at", stamp),
+                ],
+            )
+        else:
+            connection.execute(
+                "INSERT INTO meta (key, value) VALUES (?, ?) "
+                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                ("schema_version", str(SCHEMA_VERSION)),
+            )
+        connection.executemany(
+            "INSERT OR IGNORE INTO categories (name, created_at) VALUES (?, ?)",
+            [(name, stamp) for name in DEFAULT_CATEGORIES],
+        )
 
     # -------------------------------------------------------------- settings
 
@@ -305,6 +375,7 @@ class Database:
         category: str,
         spent_on=None,
         note: str = "",
+        order_name: str = "",
     ) -> Expense:
         clean_item = (item or "").strip()
         if not clean_item:
@@ -312,18 +383,21 @@ class Database:
         cents = amount if isinstance(amount, int) and not isinstance(amount, bool) else parse_amount(amount)
         clean_category = self.add_category(category or "Other")
         date_value = parse_date(spent_on) if not isinstance(spent_on, dt.date) else spent_on
+        clean_order = _clean_order_name(order_name, clean_category, clean_item)
         stamp = _timestamp()
 
         with self._connect() as connection:
             cursor = connection.execute(
-                "INSERT INTO expenses (spent_on, item, category, amount_cents, note, created_at, updated_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO expenses "
+                "(spent_on, item, category, amount_cents, note, order_name, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     format_date(date_value),
                     clean_item,
                     clean_category,
                     cents,
                     (note or "").strip(),
+                    clean_order,
                     stamp,
                     stamp,
                 ),
@@ -336,6 +410,7 @@ class Database:
             category=clean_category,
             amount_cents=cents,
             note=(note or "").strip(),
+            order_name=clean_order,
             created_at=stamp,
             updated_at=stamp,
         )
@@ -356,6 +431,7 @@ class Database:
         category: Optional[str] = None,
         spent_on=None,
         note: Optional[str] = None,
+        order_name: Optional[str] = None,
     ) -> Expense:
         current = self.get_expense(expense_id)
         if current is None:
@@ -377,6 +453,10 @@ class Database:
             )
         if note is not None:
             updates["note"] = note.strip()
+        if order_name is not None:
+            next_category = str(updates.get("category", current.category))
+            next_item = str(updates.get("item", current.item))
+            updates["order_name"] = _clean_order_name(order_name, next_category, next_item)
 
         if not updates:
             return current
@@ -403,10 +483,12 @@ class Database:
         end: Optional[dt.date] = None,
         category: Optional[str] = None,
         search: Optional[str] = None,
+        order_name: Optional[str] = None,
+        exclude_income: bool = False,
         limit: Optional[int] = None,
         newest_first: bool = True,
     ) -> List[Expense]:
-        where, params = _range_clause(start, end, category, search)
+        where, params = _range_clause(start, end, category, search, order_name, exclude_income)
         order = "spent_on DESC, id DESC" if newest_first else "spent_on ASC, id ASC"
         query = "SELECT * FROM expenses %s ORDER BY %s" % (where, order)
         if limit:
@@ -421,8 +503,10 @@ class Database:
         end: Optional[dt.date] = None,
         category: Optional[str] = None,
         search: Optional[str] = None,
+        order_name: Optional[str] = None,
+        exclude_income: bool = False,
     ) -> Bucket:
-        where, params = _range_clause(start, end, category, search)
+        where, params = _range_clause(start, end, category, search, order_name, exclude_income)
         with self._connect() as connection:
             row = connection.execute(
                 "SELECT COALESCE(SUM(amount_cents), 0) AS total, COUNT(*) AS count FROM expenses %s"
@@ -438,6 +522,8 @@ class Database:
         end: Optional[dt.date] = None,
         category: Optional[str] = None,
         search: Optional[str] = None,
+        order_name: Optional[str] = None,
+        exclude_income: bool = False,
     ) -> List[Bucket]:
         expressions = {
             "category": "category",
@@ -450,7 +536,7 @@ class Database:
                 "Cannot group by %r, choose one of %s"
                 % (group_by, ", ".join(sorted(expressions)))
             )
-        where, params = _range_clause(start, end, category, search)
+        where, params = _range_clause(start, end, category, search, order_name, exclude_income)
         expression = expressions[group_by]
         order = "bucket ASC" if group_by in {"month", "day"} else "total DESC, bucket ASC"
         query = (
@@ -474,6 +560,66 @@ class Database:
         if not row or row["oldest"] is None:
             return None
         return parse_date(row["oldest"]), parse_date(row["newest"])
+
+    def order_names(self) -> List[str]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT order_name FROM expenses "
+                "WHERE TRIM(order_name) != '' "
+                "GROUP BY order_name COLLATE NOCASE "
+                "ORDER BY MAX(spent_on) DESC, order_name COLLATE NOCASE"
+            ).fetchall()
+        return [row["order_name"] for row in rows]
+
+    def order_profits(
+        self,
+        start: Optional[dt.date] = None,
+        end: Optional[dt.date] = None,
+        order_name: Optional[str] = None,
+        search: Optional[str] = None,
+    ) -> List[OrderProfit]:
+        where, params = _range_clause(start, end, None, search, order_name)
+        extra = "TRIM(order_name) != ''"
+        where = (where + " AND " + extra) if where else "WHERE " + extra
+        query = (
+            "SELECT order_name AS name, "
+            "SUM(CASE WHEN category = ? COLLATE NOCASE THEN amount_cents ELSE 0 END) AS income, "
+            "SUM(CASE WHEN category = ? COLLATE NOCASE THEN 0 ELSE amount_cents END) AS cost, "
+            "SUM(CASE WHEN category = ? COLLATE NOCASE THEN 1 ELSE 0 END) AS income_count, "
+            "SUM(CASE WHEN category = ? COLLATE NOCASE THEN 0 ELSE 1 END) AS expense_count, "
+            "MIN(spent_on) AS first_date, MAX(spent_on) AS last_date "
+            "FROM expenses %s GROUP BY order_name COLLATE NOCASE "
+            "ORDER BY last_date DESC, name COLLATE NOCASE" % where
+        )
+        income_params = [INCOME_CATEGORY] * 4
+        with self._connect() as connection:
+            rows = connection.execute(query, income_params + list(params)).fetchall()
+        results = []
+        for row in rows:
+            results.append(
+                OrderProfit(
+                    name=row["name"],
+                    income_cents=int(row["income"] or 0),
+                    expense_cents=int(row["cost"] or 0),
+                    income_count=int(row["income_count"] or 0),
+                    expense_count=int(row["expense_count"] or 0),
+                    first_date=parse_date(row["first_date"]) if row["first_date"] else None,
+                    last_date=parse_date(row["last_date"]) if row["last_date"] else None,
+                )
+            )
+        return results
+
+    def get_order(
+        self,
+        name: str,
+        start: Optional[dt.date] = None,
+        end: Optional[dt.date] = None,
+    ) -> Optional[OrderProfit]:
+        clean = (name or "").strip()
+        if not clean:
+            return None
+        matches = self.order_profits(start=start, end=end, order_name=clean)
+        return matches[0] if matches else None
 
     # ------------------------------------------------------------- retention
 
@@ -559,6 +705,7 @@ class Database:
                     category=record.get("category") or "Other",
                     spent_on=record.get("date") or None,
                     note=record.get("note", ""),
+                    order_name=record.get("order") or record.get("order_name") or "",
                 )
             except (ParseError, StorageError) as error:
                 raise StorageError("Line %d: %s" % (line_number, error)) from None
@@ -571,6 +718,8 @@ def _range_clause(
     end: Optional[dt.date],
     category: Optional[str] = None,
     search: Optional[str] = None,
+    order_name: Optional[str] = None,
+    exclude_income: bool = False,
 ) -> tuple:
     clauses: List[str] = []
     params: List[object] = []
@@ -584,14 +733,25 @@ def _range_clause(
         clauses.append("category = ?")
         params.append(_clean_category(category))
     if search:
-        clauses.append("(item LIKE ? OR note LIKE ?)")
+        clauses.append("(item LIKE ? OR note LIKE ? OR order_name LIKE ?)")
         pattern = "%%%s%%" % search
-        params.extend([pattern, pattern])
+        params.extend([pattern, pattern, pattern])
+    if order_name:
+        clauses.append("order_name = ? COLLATE NOCASE")
+        params.append(order_name.strip())
+    if exclude_income:
+        clauses.append("category != ? COLLATE NOCASE")
+        params.append(INCOME_CATEGORY)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     return where, params
 
 
+def is_income_category(name: Optional[str]) -> bool:
+    return (name or "").strip().lower() == INCOME_CATEGORY.lower()
+
+
 def _row_to_expense(row: sqlite3.Row) -> Expense:
+    keys = row.keys()
     return Expense(
         id=int(row["id"]),
         spent_on=parse_date(row["spent_on"]),
@@ -599,6 +759,7 @@ def _row_to_expense(row: sqlite3.Row) -> Expense:
         category=row["category"],
         amount_cents=int(row["amount_cents"]),
         note=row["note"] or "",
+        order_name=(row["order_name"] if "order_name" in keys else "") or "",
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
@@ -611,6 +772,7 @@ def _expense_to_row(expense: Expense) -> Iterable[object]:
         expense.item,
         expense.category,
         "%.2f" % (expense.amount_cents / 100),
+        expense.order_name,
         expense.note,
         expense.created_at,
     )
@@ -621,6 +783,15 @@ def _clean_category(name: str) -> str:
     if not clean:
         raise ParseError("A category name is required")
     return clean
+
+
+def _clean_order_name(name: Optional[str], category: str, item: str) -> str:
+    clean = (name or "").strip()
+    if clean:
+        return clean
+    if is_income_category(category):
+        return (item or "").strip()
+    return ""
 
 
 def _timestamp() -> str:
