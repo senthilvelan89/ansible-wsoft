@@ -23,12 +23,12 @@ open it in a browser.
 
 - **Business:** Velan Foods — South Indian Breakfast
 - **Menu:** Idly, Ven Pongal, Vadai, Vada Curry, Sambar, Chutney (3 types), Kesari
-- **Phone:** 0451 640 791
+- **Phone:** +61 418 155 870
 - **Offer:** Free delivery, minimum order $30 AUD
-- **WhatsApp:** `https://wa.me/61451640791`
+- **WhatsApp:** `https://wa.me/61418155870`
 
 The "Order Now" button is a real hyperlink, so it is tappable in the PDF and in
-the HTML, and the phone number links to `tel:+61451640791`. Neither of those
+the HTML, and the phone number links to `tel:+61418155870`. Neither of those
 helps on paper, so the QR code beside the button carries the same WhatsApp link
 for anyone holding a printed flyer.
 

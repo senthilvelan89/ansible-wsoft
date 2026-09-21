@@ -12,14 +12,14 @@ import cv2
 import numpy as np
 import segno
 
-# Australian mobile 0451 640 791 in the international form wa.me requires:
+# Australian mobile +61 418 155 870 in the international form wa.me requires:
 # country code, no plus sign, no leading zero, no separators.
 #
 # Deliberately no ?text= prefill here. The prefilled greeting on the clickable
 # button in the PDF costs nothing, but in a QR it pushed the symbol from 29 to
 # 57 modules across, which at a 22 mm printed square means 0.35 mm modules --
 # too fine to scan reliably off paper. Both destinations open the same chat.
-WHATSAPP_URL = "https://wa.me/61451640791"
+WHATSAPP_URL = "https://wa.me/61418155870"
 
 OUT = pathlib.Path(__file__).resolve().parent.parent / "assets" / "whatsapp-qr.png"
 
