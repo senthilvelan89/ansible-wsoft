@@ -14,6 +14,7 @@ see on screen is exactly what comes out of the printer.
 | `out/velan-foods-pamphlet.png` | 200 dpi image for WhatsApp, Instagram or email. |
 | `out/velan-foods-pamphlet-standalone.html` | The whole pamphlet in one file (fonts and photos inlined). Open in any browser and print — no other files needed. |
 | `preview.jpg` | Small preview for viewing on the web, as shown above. |
+| `out/velan-foods-call-sheet.pdf` | One-page call sheet: ten tour operators, a 20-second pitch, and the line to add for each. |
 
 Note that GitHub shows `.html` files as source code rather than rendering them.
 To see the flyer, open `preview.jpg` or the PDF, or download an HTML file and

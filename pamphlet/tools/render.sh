@@ -37,7 +37,18 @@ python3 tools/pdf_to_png.py \
   "$OUT/velan-foods-pamphlet.pdf" \
   "preview.jpg" 110
 
-for f in "$OUT/velan-foods-pamphlet.pdf" "$OUT/velan-foods-pamphlet.png" "$PWD/preview.jpg"; do
+# Call sheet is a second A4 page; keep it out of the flyer preview.
+SRC="file://$PWD/velan-foods-call-sheet.html"
+run --print-to-pdf="$OUT/velan-foods-call-sheet.pdf" --no-pdf-header-footer
+python3 tools/pdf_to_png.py \
+  "$OUT/velan-foods-call-sheet.pdf" \
+  "$OUT/velan-foods-call-sheet.png" 160
+python3 tools/pdf_to_png.py \
+  "$OUT/velan-foods-call-sheet.pdf" \
+  "call-sheet-preview.jpg" 110
+
+for f in "$OUT/velan-foods-pamphlet.pdf" "$OUT/velan-foods-pamphlet.png" "$PWD/preview.jpg" \
+         "$OUT/velan-foods-call-sheet.pdf" "$OUT/velan-foods-call-sheet.png" "$PWD/call-sheet-preview.jpg"; do
   if [ -s "$f" ]; then
     echo "ok   $f ($(du -h "$f" | cut -f1))"
   else

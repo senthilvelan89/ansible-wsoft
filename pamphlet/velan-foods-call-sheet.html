@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Velan Foods &mdash; Tour-operator call sheet</title>
+<link rel="stylesheet" href="assets/fonts.css">
+<style>
+  :root {
+    --green-deep: #0a3327;
+    --green: #0c3b2c;
+    --gold: #f5b820;
+    --gold-soft: #ffd166;
+    --cream: #fff8e7;
+    --ink: #14352b;
+    --muted: #4a6359;
+    --rule: #d8c89a;
+  }
+
+  @page { size: A4 portrait; margin: 0; }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    background: #6b6b6b;
+    font-family: 'Poppins', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: var(--ink);
+  }
+
+  body, .page {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    position: relative;
+    width: 210mm;
+    height: 297mm;
+    margin: 0 auto;
+    overflow: hidden;
+    background: var(--cream);
+  }
+
+  @media screen {
+    body { padding: 12mm 0; }
+    .page { box-shadow: 0 8mm 24mm rgba(0, 0, 0, .45); }
+  }
+
+  header {
+    background: var(--green);
+    color: var(--cream);
+    padding: 6.5mm 12mm 6mm;
+  }
+
+  header .kicker {
+    font-size: 7.2pt;
+    font-weight: 700;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: 20pt;
+    line-height: 1.05;
+    margin-top: 1mm;
+  }
+
+  header p {
+    margin-top: 1.6mm;
+    font-size: 8.4pt;
+    line-height: 1.35;
+    color: rgba(255, 248, 231, .86);
+    max-width: 178mm;
+  }
+
+  .pitch {
+    margin: 5mm 12mm 0;
+    padding: 3.4mm 4.5mm 3.6mm;
+    background: #fff3c4;
+    border-left: 1.4mm solid var(--gold);
+  }
+
+  .pitch h2 {
+    font-size: 7pt;
+    font-weight: 800;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: #7a5a0c;
+  }
+
+  .pitch p {
+    margin-top: 1.2mm;
+    font-size: 8.6pt;
+    line-height: 1.38;
+  }
+
+  table {
+    width: 186mm;
+    margin: 4mm 12mm 0;
+    border-collapse: collapse;
+  }
+
+  th {
+    text-align: left;
+    font-size: 6.6pt;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--green);
+    padding: 0 2.2mm 1.6mm;
+    border-bottom: .4mm solid var(--green);
+  }
+
+  td {
+    vertical-align: top;
+    padding: 2.5mm 2.2mm 2.6mm;
+    border-bottom: .2mm solid var(--rule);
+    font-size: 8pt;
+    line-height: 1.3;
+  }
+
+  tr:nth-child(even) td { background: rgba(245, 184, 32, .08); }
+
+  .name {
+    font-weight: 800;
+    font-size: 8.6pt;
+    color: var(--green-deep);
+  }
+
+  .where {
+    display: block;
+    margin-top: .3mm;
+    font-size: 7pt;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .contact {
+    font-size: 7.4pt;
+    line-height: 1.35;
+    white-space: nowrap;
+  }
+
+  .say { color: var(--ink); }
+
+  footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 3.2mm 12mm;
+    background: var(--green-deep);
+    color: var(--cream);
+    font-size: 7.4pt;
+    display: flex;
+    justify-content: space-between;
+    gap: 8mm;
+  }
+
+  footer b { color: var(--gold-soft); }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="kicker">Velan Foods &middot; Melbourne west</div>
+    <h1>Tour-operator call sheet</h1>
+    <p>Ten people who can turn a one-off breakfast into a repeating coach order. Call in this order. Confirm the number before you drive over &mdash; listings move.</p>
+  </header>
+
+  <div class="pitch">
+    <h2>The 20-second pitch &mdash; say this, then stop</h2>
+    <p>&ldquo;Hi, I&rsquo;m from Velan Foods in Melbourne&rsquo;s west. We cook South Indian breakfast &mdash; idly, pongal, vadai, sambar, three chutneys and kesari &mdash; packed for groups. Tour managers use us when a coach needs a proper breakfast before Great Ocean Road or a farm stop. Twenty-four hours&rsquo; notice, we drop to the hotel, depot or venue. Can I leave a menu and send you a sample box?&rdquo;</p>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:8mm">#</th>
+        <th style="width:48mm">Who</th>
+        <th style="width:48mm">Contact</th>
+        <th>Add this one line after the pitch</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>
+          <span class="name">Dream Tours / DTIM</span>
+          <span class="where">Hoppers Crossing / Truganina</span>
+        </td>
+        <td class="contact">
+          +61 3 9931 0350<br>
+          WhatsApp 0414 481 388<br>
+          info@dreamtours.travel
+        </td>
+        <td class="say">You already run India groups from here &mdash; I can be the South Indian breakfast on those itineraries.</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>
+          <span class="name">Harlan Tours</span>
+          <span class="where">Melbourne inbound coaches</span>
+        </td>
+        <td class="contact">
+          0493 756 612<br>
+          info@harlantours.com
+        </td>
+        <td class="say">You already carry Indian inbound groups. I want to be the packed breakfast your tour managers can book.</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>
+          <span class="name">Christian&rsquo;s Bus</span>
+          <span class="where">Werribee &amp; Melton depots</span>
+        </td>
+        <td class="contact">
+          christiansbus.com.au<br>
+          Ask for Charter
+        </td>
+        <td class="say">I&rsquo;m not hiring a bus &mdash; who are your inbound / Indian group bookers so I can offer them breakfast?</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>
+          <span class="name">Travelstream Tarneit</span>
+          <span class="where">T18/540 Derrimut Rd, Tarneit</span>
+        </td>
+        <td class="contact">(03) 8755 1333</td>
+        <td class="say">When a family of twelve lands from India, I can have breakfast at their Airbnb the next morning.</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>
+          <span class="name">Zara World Travel</span>
+          <span class="where">32 Cepora Rd, Tarneit</span>
+        </td>
+        <td class="contact">0433 115 075</td>
+        <td class="say">Same offer: visiting families and small vans going to the zoo or Great Ocean Road.</td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td>
+          <span class="name">MyTravelMitra</span>
+          <span class="where">12 Romek Way, Truganina</span>
+        </td>
+        <td class="contact">(03) 8080 0400</td>
+        <td class="say">You&rsquo;re next to the warehouse belt &mdash; I can drop boxes to a depot at 6am before the coach leaves.</td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td>
+          <span class="name">Safe World Travel</span>
+          <span class="where">3 Pipit Ct, Tarneit</span>
+        </td>
+        <td class="contact">(03) 9748 7964</td>
+        <td class="say">If you package even one van a month, I will hold the same menu and price so you can quote it.</td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td>
+          <span class="name">IN2 Travel / Kalkarra</span>
+          <span class="where">2 Main St, Point Cook</span>
+        </td>
+        <td class="contact">(03) 9395 4077</td>
+        <td class="say">Point Cook families host a lot of visitors &mdash; I do the first-morning breakfast they actually want.</td>
+      </tr>
+      <tr>
+        <td>9</td>
+        <td>
+          <span class="name">Travel Outlook</span>
+          <span class="where">13 Baycrest Dr, Point Cook</span>
+        </td>
+        <td class="contact">(03) 9021 1782</td>
+        <td class="say">Leave the pamphlet on the counter. I&rsquo;ll send a sample if you have a group this month.</td>
+      </tr>
+      <tr>
+        <td>10</td>
+        <td>
+          <span class="name">VM Travel &amp; Tours</span>
+          <span class="where">11 Sun Cres, Sunshine</span>
+        </td>
+        <td class="contact">(03) 9312 1522</td>
+        <td class="say">Sunshine temple crowds and visiting families &mdash; I can do Saturday-morning trays.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <footer>
+    <span>Velan Foods &middot; South Indian breakfast &middot; <b>+61 418 155 870</b></span>
+    <span>WhatsApp the same number &middot; 24 hours&rsquo; notice &middot; hotel, depot or venue drop</span>
+  </footer>
+</div>
+</body>
+</html>
