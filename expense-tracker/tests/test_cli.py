@@ -150,7 +150,7 @@ class EditDeleteTests(CliTestCase):
 class CategoryCommandTests(CliTestCase):
     def test_list_shows_defaults(self):
         _, out, _ = self.run_cli("categories")
-        self.assertIn("Groceries", out)
+        self.assertIn("Dining", out)
         self.assertIn("Transport", out)
 
     def test_add_and_rename(self):

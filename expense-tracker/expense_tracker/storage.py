@@ -27,19 +27,23 @@ SCHEMA_VERSION = 3
 INCOME_CATEGORY = "Income"
 
 DEFAULT_CATEGORIES = (
-    "Groceries",
     "Dining",
     "Transport",
     "Housing",
     "Utilities",
     "Health",
     "Shopping",
-    "Entertainment",
     "Travel",
-    "Education",
     "Personal",
     INCOME_CATEGORY,
     "Other",
+)
+
+# Seeded on older databases; drop from the dropdown when nothing is booked against them.
+RETIRED_DEFAULT_CATEGORIES = (
+    "Education",
+    "Entertainment",
+    "Groceries",
 )
 
 EXPORT_COLUMNS = ("id", "date", "item", "category", "amount", "order", "note", "created_at")
@@ -270,7 +274,28 @@ class Database(FoodOrderMixin):
             "INSERT OR IGNORE INTO categories (name, created_at) VALUES (?, ?)",
             [(name, stamp) for name in DEFAULT_CATEGORIES],
         )
+        self._retire_unused_default_categories(connection, stamp)
         self.ensure_order_schema(connection)
+
+    def _retire_unused_default_categories(self, connection, stamp: str) -> None:
+        already = connection.execute(
+            "SELECT value FROM meta WHERE key = 'retired_unused_defaults'"
+        ).fetchone()
+        if already:
+            return
+        for name in RETIRED_DEFAULT_CATEGORIES:
+            used = connection.execute(
+                "SELECT COUNT(*) AS total FROM expenses WHERE category = ? COLLATE NOCASE",
+                (name,),
+            ).fetchone()["total"]
+            if not used:
+                connection.execute(
+                    "DELETE FROM categories WHERE name = ? COLLATE NOCASE", (name,)
+                )
+        connection.execute(
+            "INSERT OR IGNORE INTO meta (key, value) VALUES ('retired_unused_defaults', ?)",
+            (stamp,),
+        )
 
     # -------------------------------------------------------------- settings
 

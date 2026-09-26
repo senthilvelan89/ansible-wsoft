@@ -6,7 +6,7 @@ built on the Python standard library so it runs on a stock macOS install.
 
 from __future__ import annotations
 
-__version__ = "1.4.0"
+__version__ = "1.4.1"
 
 APP_NAME = "expense-tracker"
 DEFAULT_RETENTION_MONTHS = 12
