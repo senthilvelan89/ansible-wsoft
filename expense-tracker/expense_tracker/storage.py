@@ -48,6 +48,7 @@ DEFAULT_CATEGORIES = (
     "Mobile",
     "Other",
     "Shares",
+    "Subscriptions",
     "Tours",
     "Travel",
     "TV",
