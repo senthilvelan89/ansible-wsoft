@@ -151,7 +151,7 @@ class CategoryCommandTests(CliTestCase):
     def test_list_shows_defaults(self):
         _, out, _ = self.run_cli("categories")
         self.assertIn("Dining", out)
-        self.assertIn("Transport", out)
+        self.assertIn("Income", out)
 
     def test_add_and_rename(self):
         self.run_cli("categories", "add", "Pets")

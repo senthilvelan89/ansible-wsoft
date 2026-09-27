@@ -28,13 +28,7 @@ INCOME_CATEGORY = "Income"
 
 DEFAULT_CATEGORIES = (
     "Dining",
-    "Transport",
-    "Housing",
-    "Utilities",
-    "Health",
-    "Shopping",
     "Travel",
-    "Personal",
     INCOME_CATEGORY,
     "Other",
 )
@@ -44,6 +38,14 @@ RETIRED_DEFAULT_CATEGORIES = (
     "Education",
     "Entertainment",
     "Groceries",
+    "Health",
+    "Personal",
+    "Housing",
+    "outsideFood",
+    "Outside Food",
+    "Shopping",
+    "Utilities",
+    "Transport",
 )
 
 EXPORT_COLUMNS = ("id", "date", "item", "category", "amount", "order", "note", "created_at")
@@ -274,16 +276,26 @@ class Database(FoodOrderMixin):
             "INSERT OR IGNORE INTO categories (name, created_at) VALUES (?, ?)",
             [(name, stamp) for name in DEFAULT_CATEGORIES],
         )
-        self._retire_unused_default_categories(connection, stamp)
+        self._retire_unused_default_categories(connection)
         self.ensure_order_schema(connection)
 
-    def _retire_unused_default_categories(self, connection, stamp: str) -> None:
-        already = connection.execute(
+    def _retire_unused_default_categories(self, connection) -> None:
+        row = connection.execute(
             "SELECT value FROM meta WHERE key = 'retired_unused_defaults'"
         ).fetchone()
-        if already:
-            return
-        for name in RETIRED_DEFAULT_CATEGORIES:
+        already = set()
+        if row and row["value"]:
+            parts = [part.strip() for part in row["value"].split(",") if part.strip()]
+            known = {name.lower() for name in RETIRED_DEFAULT_CATEGORIES}
+            if any(part.lower() in known for part in parts):
+                already = {part.lower() for part in parts}
+            else:
+                # First version stored a timestamp after retiring these three.
+                already = {"education", "entertainment", "groceries"}
+        pending = [
+            name for name in RETIRED_DEFAULT_CATEGORIES if name.lower() not in already
+        ]
+        for name in pending:
             used = connection.execute(
                 "SELECT COUNT(*) AS total FROM expenses WHERE category = ? COLLATE NOCASE",
                 (name,),
@@ -293,8 +305,9 @@ class Database(FoodOrderMixin):
                     "DELETE FROM categories WHERE name = ? COLLATE NOCASE", (name,)
                 )
         connection.execute(
-            "INSERT OR IGNORE INTO meta (key, value) VALUES ('retired_unused_defaults', ?)",
-            (stamp,),
+            "INSERT INTO meta (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            ("retired_unused_defaults", ",".join(RETIRED_DEFAULT_CATEGORIES)),
         )
 
     # -------------------------------------------------------------- settings
