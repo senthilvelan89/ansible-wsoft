@@ -244,23 +244,17 @@ function expenseTable(expenses, { showDate }) {
 
 function renderMonthBudgets(month) {
   const node = $("month-budgets");
-  if (!month.budgets_active) {
+  if (!month.budgets || !month.budgets.length) {
     node.classList.add("hidden");
     node.replaceChildren();
     return;
   }
   node.classList.remove("hidden");
-  if (!month.budgets || !month.budgets.length) {
-    node.replaceChildren(
-      el("p", {
-        class: "muted",
-        text: "Fill category-limits.csv with a monthly limit for each category, then run expenses limits import category-limits.csv.",
-      })
-    );
-    return;
-  }
+  const title = month.budgets_preview
+    ? "October remaining · September left as-is"
+    : "Remaining this month";
   node.replaceChildren(
-    el("h3", { class: "section-title", text: "Remaining this month" }),
+    el("h3", { class: "section-title", text: title }),
     ...month.budgets.map((row) =>
       el("div", { class: row.over ? "budget-row over" : "budget-row" }, [
         el("span", { class: "budget-name", text: row.category }),

@@ -73,6 +73,36 @@ RETIRED_DEFAULT_CATEGORIES = (
 
 EXPORT_COLUMNS = ("id", "date", "item", "category", "amount", "order", "note", "created_at")
 BUDGET_START = dt.date(2026, 10, 1)
+LIMITS_SEED_KEY = "seeded_category_limits_2026_10"
+
+# Monthly limits from category-limits.csv. Income is left uncapped.
+DEFAULT_CATEGORY_LIMITS = {
+    "Car expense": "500",
+    "Costco": "300",
+    "Council": "290",
+    "Day care": "700",
+    "Dining": "75",
+    "Dress": "300",
+    "EB": "70",
+    "Flight": "400",
+    "Gas": "120",
+    "Gold": "800",
+    "Health Insurance": "480",
+    "Home Insurance": "75",
+    "HouseSavings": "5500",
+    "India Transfer": "150",
+    "Indian Groc": "250",
+    "Locker": "20",
+    "Mobile": "80",
+    "Other": "500",
+    "Shares": "1600",
+    "Subscriptions": "200",
+    "TV": "15",
+    "Tours": "1000",
+    "Travel": "150",
+    "Veggies": "800",
+    "Water": "50",
+}
 
 
 class StorageError(RuntimeError):
@@ -307,7 +337,45 @@ class Database(FoodOrderMixin):
             [(name, stamp) for name in DEFAULT_CATEGORIES],
         )
         self._retire_unused_default_categories(connection)
+        self._seed_category_limits(connection, stamp)
         self.ensure_order_schema(connection)
+
+    def _seed_category_limits(self, connection, stamp: str) -> None:
+        already = connection.execute(
+            "SELECT value FROM meta WHERE key = ?", (LIMITS_SEED_KEY,)
+        ).fetchone()
+        if already:
+            return
+        limits = dict(DEFAULT_CATEGORY_LIMITS)
+        csv_path = _limits_csv_path()
+        if csv_path is not None:
+            with csv_path.open("r", encoding="utf-8", newline="") as handle:
+                reader = csv.DictReader(handle)
+                for raw in reader:
+                    name = (raw.get("category") or raw.get("name") or "").strip()
+                    amount = (raw.get("limit") or raw.get("amount") or "").strip()
+                    if name and amount:
+                        limits[name] = amount
+                    elif name:
+                        limits.pop(name, None)
+        for name, amount in limits.items():
+            connection.execute(
+                "INSERT OR IGNORE INTO categories (name, created_at) VALUES (?, ?)",
+                (name, stamp),
+            )
+            connection.execute(
+                "INSERT INTO category_limits (name, monthly_limit_cents, updated_at) "
+                "VALUES (?, ?, ?) "
+                "ON CONFLICT(name) DO UPDATE SET "
+                "monthly_limit_cents = excluded.monthly_limit_cents, "
+                "updated_at = excluded.updated_at",
+                (name, parse_amount(amount), stamp),
+            )
+        connection.execute(
+            "INSERT INTO meta (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (LIMITS_SEED_KEY, stamp),
+        )
 
     def _retire_unused_default_categories(self, connection) -> None:
         row = connection.execute(
@@ -899,6 +967,14 @@ class Database(FoodOrderMixin):
                 raise StorageError("Line %d: %s" % (line_number, error)) from None
             imported += 1
         return imported
+
+
+def _limits_csv_path() -> Optional[Path]:
+    here = Path(__file__).resolve()
+    for path in (here.parents[1] / "category-limits.csv", here.parent / "category-limits.csv"):
+        if path.exists():
+            return path
+    return None
 
 
 def _range_clause(

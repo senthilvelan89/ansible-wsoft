@@ -23,7 +23,7 @@ from .parsing import (
     today,
 )
 from .reports import render_expenses, render_orders, render_summary, render_table
-from .storage import Database, StorageError
+from .storage import BUDGET_START, Database, StorageError
 
 PROGRAM = "expenses"
 
@@ -499,10 +499,13 @@ def command_limits(args, database: Database) -> int:
 
     start, end = resolve_range(month=getattr(args, "month", None) or "this")
     reference = start or today()
-    if not database.budgets_apply_for(dt.date(reference.year, reference.month, 1)):
-        print("Category limits start in October 2026. September spending is left as-is.")
-        return 0
-    rows = database.month_budgets(reference.year, reference.month, symbol)
+    month_start = dt.date(reference.year, reference.month, 1)
+    if not database.budgets_apply_for(month_start):
+        print("September spending is left as-is. October remaining:")
+        print()
+        rows = database.month_budgets(BUDGET_START.year, BUDGET_START.month, symbol)
+    else:
+        rows = database.month_budgets(reference.year, reference.month, symbol)
     if not rows:
         print(
             "No monthly limits yet. Fill category-limits.csv and run "

@@ -30,7 +30,7 @@ from .parsing import (
     resolve_range,
     today,
 )
-from .storage import Database, StorageError
+from .storage import BUDGET_START, Database, StorageError
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 GUARD_HEADER = "X-Expense-Tracker"
@@ -503,9 +503,10 @@ def _state_payload(database: Database, query: Dict[str, list]) -> Dict[str, Any]
             "categories": [bucket.to_dict(symbol) for bucket in month_categories],
             "orders": [order.to_dict(symbol) for order in month_orders],
             "budgets_active": database.budgets_apply_for(month_start),
+            "budgets_preview": month_start < BUDGET_START,
             "budgets": database.month_budgets(month_start.year, month_start.month, symbol)
             if database.budgets_apply_for(month_start)
-            else [],
+            else database.month_budgets(BUDGET_START.year, BUDGET_START.month, symbol),
         },
         "window": {
             "start": format_date(window_start),
