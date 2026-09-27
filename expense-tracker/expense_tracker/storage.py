@@ -27,10 +27,29 @@ SCHEMA_VERSION = 3
 INCOME_CATEGORY = "Income"
 
 DEFAULT_CATEGORIES = (
+    "Car expense",
+    "Costco",
+    "Day care",
     "Dining",
-    "Travel",
+    "Dress",
+    "Flight",
+    "Gas",
+    "Gold",
+    "Health Insurance",
+    "Home Insurance",
+    "HouseSavings",
+    "India Transfer",
+    "Indian Groc",
     INCOME_CATEGORY,
+    "Locker",
+    "Mobile",
     "Other",
+    "Shares",
+    "Tours",
+    "Travel",
+    "TV",
+    "Veggies",
+    "Water",
 )
 
 # Seeded on older databases; drop from the dropdown when nothing is booked against them.
