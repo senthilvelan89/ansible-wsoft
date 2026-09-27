@@ -30,9 +30,11 @@ INCOME_CATEGORY = "Income"
 DEFAULT_CATEGORIES = (
     "Car expense",
     "Costco",
+    "Council",
     "Day care",
     "Dining",
     "Dress",
+    "EB",
     "Flight",
     "Gas",
     "Gold",

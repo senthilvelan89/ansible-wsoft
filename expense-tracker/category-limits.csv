@@ -1,24 +1,27 @@
 category,limit
-Car expense,
-Costco,
-Day care,
-Dining,
-Dress,
-Flight,
-Gas,
-Gold,
-Health Insurance,
-Home Insurance,
-HouseSavings,
-India Transfer,
-Indian Groc,
+Car expense,500
+Costco,300
+Council,
+Day care,700
+Dining,75
+Dress,300
+EB,
+Flight,400
+Gas,120
+Gold,800
+Health Insurance,480
+Home Insurance,75
+HouseSavings,5500
+India Transfer,150
+Indian Groc,250
 Income,
-Locker,
-Mobile,
-Other,
-Shares,
-TV,
-Tours,
-Travel,
-Veggies,
-Water,
+Locker,20
+Mobile,80
+Other,500
+Shares,1600
+TV,15
+Tours,1000
+Travel,150
+Veggies,800
+Water,290
+
