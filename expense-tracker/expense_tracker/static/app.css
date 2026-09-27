@@ -320,6 +320,22 @@ td.date { white-space: nowrap; color: var(--muted); font-variant-numeric: tabula
 
 /* ---------------------------------------------------------------- charts */
 
+.budget-list { margin: 0 0 16px; }
+.budget-list .section-title { margin-top: 0; margin-bottom: 10px; }
+.budget-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px 14px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13.5px;
+}
+.budget-row:last-child { border-bottom: none; }
+.budget-name { font-weight: 600; }
+.budget-spent { color: var(--muted); }
+.budget-left { font-weight: 650; font-variant-numeric: tabular-nums; }
+.budget-row.over .budget-left { color: var(--danger); }
+
 .bars { display: flex; flex-direction: column; gap: 10px; }
 .bar-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; }
 .bar-label { font-size: 13.5px; }

@@ -17,6 +17,7 @@ from .parsing import (
     add_months,
     format_amount,
     format_date,
+    month_bounds,
     parse_amount,
     parse_date,
     today,
@@ -68,6 +69,7 @@ RETIRED_DEFAULT_CATEGORIES = (
 )
 
 EXPORT_COLUMNS = ("id", "date", "item", "category", "amount", "order", "note", "created_at")
+BUDGET_START = dt.date(2026, 10, 1)
 
 
 class StorageError(RuntimeError):
@@ -247,6 +249,12 @@ class Database(FoodOrderMixin):
                     ON expenses (spent_on);
                 CREATE INDEX IF NOT EXISTS idx_expenses_category
                     ON expenses (category);
+
+                CREATE TABLE IF NOT EXISTS category_limits (
+                    name                TEXT PRIMARY KEY COLLATE NOCASE,
+                    monthly_limit_cents INTEGER NOT NULL,
+                    updated_at          TEXT NOT NULL
+                );
                 """
             )
             self._migrate(connection)
@@ -398,6 +406,20 @@ class Database(FoodOrderMixin):
             )
             if source.lower() != target.lower():
                 connection.execute("DELETE FROM categories WHERE name = ?", (source,))
+                limit = connection.execute(
+                    "SELECT monthly_limit_cents FROM category_limits WHERE name = ?",
+                    (source,),
+                ).fetchone()
+                if limit:
+                    connection.execute(
+                        "INSERT INTO category_limits (name, monthly_limit_cents, updated_at) "
+                        "VALUES (?, ?, ?) "
+                        "ON CONFLICT(name) DO UPDATE SET "
+                        "monthly_limit_cents = excluded.monthly_limit_cents, "
+                        "updated_at = excluded.updated_at",
+                        (target, int(limit["monthly_limit_cents"]), _timestamp()),
+                    )
+                    connection.execute("DELETE FROM category_limits WHERE name = ?", (source,))
         return cursor.rowcount
 
     def delete_category(self, name: str, reassign_to: Optional[str] = None) -> int:
@@ -429,7 +451,105 @@ class Database(FoodOrderMixin):
                 )
                 moved = cursor.rowcount
             connection.execute("DELETE FROM categories WHERE name = ?", (source,))
+            connection.execute("DELETE FROM category_limits WHERE name = ?", (source,))
         return moved
+
+    def category_limit_map(self) -> Dict[str, int]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT name, monthly_limit_cents FROM category_limits"
+            ).fetchall()
+        return {row["name"].lower(): int(row["monthly_limit_cents"]) for row in rows}
+
+    def set_category_limit(self, name: str, amount) -> None:
+        clean = self.add_category(name)
+        if amount in ("", None):
+            with self._connect() as connection:
+                connection.execute("DELETE FROM category_limits WHERE name = ?", (clean,))
+            return
+        cents = parse_amount(amount)
+        if cents < 0:
+            raise ParseError("A category limit cannot be negative")
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT INTO category_limits (name, monthly_limit_cents, updated_at) "
+                "VALUES (?, ?, ?) "
+                "ON CONFLICT(name) DO UPDATE SET "
+                "monthly_limit_cents = excluded.monthly_limit_cents, "
+                "updated_at = excluded.updated_at",
+                (clean, cents, _timestamp()),
+            )
+
+    def import_category_limits(self, handle) -> int:
+        reader = csv.DictReader(handle)
+        if reader.fieldnames is None:
+            raise StorageError("The limits file needs a header row: category,limit")
+        headers = {name.strip().lower(): name for name in reader.fieldnames if name}
+        category_key = next((headers[key] for key in ("category", "name") if key in headers), None)
+        limit_key = next((headers[key] for key in ("limit", "monthly_limit", "amount") if key in headers), None)
+        if not category_key or not limit_key:
+            raise StorageError("The limits file needs category and limit columns")
+        updated = 0
+        for raw in reader:
+            name = (raw.get(category_key) or "").strip()
+            amount = (raw.get(limit_key) or "").strip()
+            if not name:
+                continue
+            if amount == "":
+                self.set_category_limit(name, "")
+                continue
+            self.set_category_limit(name, amount)
+            updated += 1
+        return updated
+
+    def export_category_limits(self, handle) -> None:
+        writer = csv.writer(handle)
+        writer.writerow(["category", "limit"])
+        limits = self.category_limit_map()
+        for name in self.categories():
+            cents = limits.get(name.lower())
+            if cents is None:
+                limit_text = ""
+            elif cents % 100 == 0:
+                limit_text = str(cents // 100)
+            else:
+                limit_text = "%.2f" % (cents / 100)
+            writer.writerow([name, limit_text])
+
+    def budgets_apply_for(self, when: dt.date) -> bool:
+        return when >= BUDGET_START
+
+    def month_budgets(self, year: int, month: int, symbol: str = "$") -> List[Dict[str, object]]:
+        start, end = month_bounds(year, month)
+        spent = {
+            bucket.key.lower(): bucket.total_cents
+            for bucket in self.summary("category", start=start, end=end, exclude_income=True)
+        }
+        limits = self.category_limit_map()
+        rows: List[Dict[str, object]] = []
+        for name in self.categories():
+            if is_income_category(name):
+                continue
+            limit_cents = limits.get(name.lower())
+            if limit_cents is None:
+                continue
+            spent_cents = int(spent.get(name.lower(), 0))
+            remaining = limit_cents - spent_cents
+            rows.append(
+                {
+                    "category": name,
+                    "spent_cents": spent_cents,
+                    "spent_display": format_amount(spent_cents, symbol),
+                    "limit_cents": limit_cents,
+                    "limit_display": format_amount(limit_cents, symbol),
+                    "remaining_cents": remaining,
+                    "remaining_display": format_amount(remaining, symbol),
+                    "remaining_label": "%s of %s remaining"
+                    % (format_amount(remaining, symbol), format_amount(limit_cents, symbol)),
+                    "over": remaining < 0,
+                }
+            )
+        return rows
 
     # -------------------------------------------------------------- expenses
 

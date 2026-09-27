@@ -242,6 +242,35 @@ function expenseTable(expenses, { showDate }) {
   return el("table", {}, [el("thead", {}, [head]), el("tbody", {}, rows)]);
 }
 
+function renderMonthBudgets(month) {
+  const node = $("month-budgets");
+  if (!month.budgets_active) {
+    node.classList.add("hidden");
+    node.replaceChildren();
+    return;
+  }
+  node.classList.remove("hidden");
+  if (!month.budgets || !month.budgets.length) {
+    node.replaceChildren(
+      el("p", {
+        class: "muted",
+        text: "Fill category-limits.csv with a monthly limit for each category, then run expenses limits import category-limits.csv.",
+      })
+    );
+    return;
+  }
+  node.replaceChildren(
+    el("h3", { class: "section-title", text: "Remaining this month" }),
+    ...month.budgets.map((row) =>
+      el("div", { class: row.over ? "budget-row over" : "budget-row" }, [
+        el("span", { class: "budget-name", text: row.category }),
+        el("span", { class: "budget-spent", text: `spent ${row.spent_display}` }),
+        el("span", { class: "budget-left", text: row.remaining_label }),
+      ])
+    )
+  );
+}
+
 function renderBars(container, buckets) {
   if (!buckets.length) {
     container.replaceChildren(empty("No spending in this range."));
@@ -301,6 +330,7 @@ async function loadState() {
   $("day-entries").replaceChildren(expenseTable(data.day.expenses, { showDate: false }));
   $("month-total").textContent = data.month.total_display + " spent";
   $("month-label").textContent = `${data.month.label} · ${data.month.start} to ${data.month.end}`;
+  renderMonthBudgets(data.month);
   renderBars($("month-breakdown"), data.month.categories);
   $("window-total").textContent =
     `${data.window.total_display} between ${data.window.start} and ${data.window.end}`;

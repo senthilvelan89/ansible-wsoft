@@ -127,6 +127,19 @@ def build_parser() -> argparse.ArgumentParser:
     category_delete.set_defaults(action="delete")
     categories.set_defaults(handler=command_categories, action=None)
 
+    limits = add_command("limits", help="monthly spend limits per category, from October 2026")
+    limit_actions = limits.add_subparsers(dest="limit_action")
+    limit_list = limit_actions.add_parser("list", help="show remaining for a month (default)")
+    limit_list.add_argument("-m", "--month", default="this", help="month such as 2026-10 or this")
+    limit_list.set_defaults(limit_action="list")
+    limit_export = limit_actions.add_parser("export", help="write categories and limits to CSV")
+    limit_export.add_argument("-o", "--out", help="file to write (default: stdout)")
+    limit_export.set_defaults(limit_action="export")
+    limit_import = limit_actions.add_parser("import", help="load limits from a CSV with category,limit columns")
+    limit_import.add_argument("path", help="CSV to import")
+    limit_import.set_defaults(limit_action="import")
+    limits.set_defaults(handler=command_limits, limit_action=None)
+
     orders = add_command("orders", help="food orders: income, costs, labour hours and profit")
     order_actions = orders.add_subparsers(dest="order_action")
     order_list = order_actions.add_parser("list", help="list food orders (default)")
@@ -459,6 +472,59 @@ def command_categories(args, database: Database) -> int:
             ]
         )
     print(render_table(["CATEGORY", "ENTRIES", "TOTAL"], rows, ["left", "right", "right"]))
+    return 0
+
+
+def command_limits(args, database: Database) -> int:
+    action = getattr(args, "limit_action", None) or "list"
+    symbol = database.currency_symbol
+
+    if action == "export":
+        if args.out:
+            path = Path(args.out).expanduser()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("w", encoding="utf-8", newline="") as handle:
+                database.export_category_limits(handle)
+            print("Wrote category limits to %s" % path)
+            return 0
+        database.export_category_limits(sys.stdout)
+        return 0
+
+    if action == "import":
+        path = Path(args.path).expanduser()
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            updated = database.import_category_limits(handle)
+        print("Updated limits for %d categor%s." % (updated, "y" if updated == 1 else "ies"))
+        return 0
+
+    start, end = resolve_range(month=getattr(args, "month", None) or "this")
+    reference = start or today()
+    if not database.budgets_apply_for(dt.date(reference.year, reference.month, 1)):
+        print("Category limits start in October 2026. September spending is left as-is.")
+        return 0
+    rows = database.month_budgets(reference.year, reference.month, symbol)
+    if not rows:
+        print(
+            "No monthly limits yet. Fill category-limits.csv and run "
+            "`expenses limits import category-limits.csv`."
+        )
+        return 0
+    table = [
+        [
+            row["category"],
+            row["spent_display"],
+            row["limit_display"],
+            row["remaining_label"],
+        ]
+        for row in rows
+    ]
+    print(
+        render_table(
+            ["CATEGORY", "SPENT", "LIMIT", "REMAINING"],
+            table,
+            ["left", "right", "right", "left"],
+        )
+    )
     return 0
 
 

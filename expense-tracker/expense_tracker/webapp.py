@@ -502,6 +502,10 @@ def _state_payload(database: Database, query: Dict[str, list]) -> Dict[str, Any]
             "profit_display": format_amount(month_profit, symbol),
             "categories": [bucket.to_dict(symbol) for bucket in month_categories],
             "orders": [order.to_dict(symbol) for order in month_orders],
+            "budgets_active": database.budgets_apply_for(month_start),
+            "budgets": database.month_budgets(month_start.year, month_start.month, symbol)
+            if database.budgets_apply_for(month_start)
+            else [],
         },
         "window": {
             "start": format_date(window_start),
