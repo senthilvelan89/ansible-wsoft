@@ -783,6 +783,33 @@ class Database(FoodOrderMixin):
             cursor = connection.execute("DELETE FROM expenses WHERE id = ?", (int(expense_id),))
         return cursor.rowcount > 0
 
+    def erase_month(self, start: dt.date, end: dt.date) -> Dict[str, int]:
+        """Remove personal expenses and statement fingerprints for a month.
+
+        Food-order ledgers are left alone.
+        """
+
+        start_text, end_text = format_date(start), format_date(end)
+        with self._connect() as connection:
+            expenses = connection.execute(
+                "SELECT COUNT(*) AS total FROM expenses WHERE spent_on >= ? AND spent_on <= ?",
+                (start_text, end_text),
+            ).fetchone()["total"]
+            connection.execute(
+                "DELETE FROM expenses WHERE spent_on >= ? AND spent_on <= ?",
+                (start_text, end_text),
+            )
+            imports = connection.execute(
+                "SELECT COUNT(*) AS total FROM imported_statements "
+                "WHERE spent_on >= ? AND spent_on <= ?",
+                (start_text, end_text),
+            ).fetchone()["total"]
+            connection.execute(
+                "DELETE FROM imported_statements WHERE spent_on >= ? AND spent_on <= ?",
+                (start_text, end_text),
+            )
+        return {"expenses": int(expenses), "imports": int(imports)}
+
     def list_expenses(
         self,
         start: Optional[dt.date] = None,

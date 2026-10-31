@@ -290,10 +290,11 @@ def propose_lines(
     start: Optional[dt.date] = None,
     end: Optional[dt.date] = None,
     symbol: str = "$",
+    ignore_imported: bool = False,
 ) -> List[ProposedLine]:
     clues = database.list_statement_clues()
     fingerprints = [fingerprint_for(line.spent_on, line.amount_cents, line.description) for line in raw_lines]
-    already = database.find_imported_fingerprints(fingerprints)
+    already = {} if ignore_imported else database.find_imported_fingerprints(fingerprints)
     proposed: List[ProposedLine] = []
     for line in raw_lines:
         if start and line.spent_on < start:
@@ -359,6 +360,7 @@ def preview_files(
     files: Sequence[Tuple[str, bytes]],
     month: Optional[str] = "last",
     all_dates: bool = False,
+    ignore_imported: bool = False,
 ) -> Preview:
     start = end = None
     if not all_dates:
@@ -377,7 +379,12 @@ def preview_files(
             continue
         raw.extend(parsed)
     preview.lines = propose_lines(
-        database, raw, start=start, end=end, symbol=database.currency_symbol
+        database,
+        raw,
+        start=start,
+        end=end,
+        symbol=database.currency_symbol,
+        ignore_imported=ignore_imported,
     )
     return preview
 

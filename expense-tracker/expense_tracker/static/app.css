@@ -403,11 +403,26 @@ td.date { white-space: nowrap; color: var(--muted); font-variant-numeric: tabula
 
 .statement-upload {
   display: grid;
-  grid-template-columns: 160px 1fr auto;
+  grid-template-columns: 160px 1fr;
   gap: 12px;
   align-items: end;
   margin: 16px 0 8px;
 }
+.statement-upload .dropzone,
+.statement-upload .statement-buttons { grid-column: 1 / -1; }
+.statement-upload .check-field {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: 13.5px;
+}
+.statement-upload .check-field input {
+  width: auto;
+  margin-top: 3px;
+}
+.statement-buttons { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .dropzone {
   display: flex;
   flex-direction: column;

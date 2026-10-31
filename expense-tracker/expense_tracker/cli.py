@@ -202,8 +202,8 @@ def build_parser() -> argparse.ArgumentParser:
     statements.add_argument(
         "-m",
         "--month",
-        default="last",
-        help="month to keep (default: last, for the 5th-of-the-month drop-off)",
+        default=None,
+        help="month such as 2026-10, this or last (default: this when replacing, last otherwise)",
     )
     statements.add_argument(
         "--all-dates",
@@ -216,6 +216,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="import every ready row without asking",
     )
     statements.add_argument("--dry-run", action="store_true", help="show the grouping only")
+    statements.add_argument(
+        "--replace",
+        action="store_true",
+        help="erase that month's personal expenses first, then import the statements",
+    )
+    statements.add_argument(
+        "--erase",
+        action="store_true",
+        help="delete that month's personal expenses (and statement fingerprints) and stop",
+    )
     statements.add_argument("--clues", action="store_true", help="list merchant clues and exit")
     statements.add_argument(
         "--remember",
@@ -747,6 +757,22 @@ def command_statements(args, database: Database) -> int:
             print("Forgot clue #%d" % args.forget)
             return 0
         raise StorageError("No clue with id %d" % args.forget)
+    statement_month = args.month or ("this" if (args.erase or args.replace) else "last")
+
+    if args.erase or args.replace:
+        if args.all_dates:
+            raise StorageError("Say which month to erase, for example --month 2026-10")
+        start, end = resolve_range(month=statement_month)
+        if not start or not end:
+            raise StorageError("Say which month to erase, for example --month 2026-10")
+        wiped = database.erase_month(start, end)
+        print(
+            "Erased %d personal expense(s) and %d statement fingerprint(s) for %s to %s. Food orders were left alone."
+            % (wiped["expenses"], wiped["imports"], format_date(start), format_date(end))
+        )
+        if args.erase and not args.paths:
+            return 0
+
     if args.clues or not args.paths:
         clues = database.list_statement_clues()
         if not clues:
@@ -763,7 +789,10 @@ def command_statements(args, database: Database) -> int:
         print(render_table(["ID", "CLUE", "CATEGORY"], rows, ["right", "left", "left"]))
         if not args.paths:
             print()
-            print("Drop last month's PDFs with: expenses statements --month last file1.pdf file2.pdf")
+            print(
+                "Replace October from statements with: "
+                "expenses statements --replace --month 2026-10 file1.pdf file2.pdf"
+            )
         return 0
 
     files = []
@@ -774,7 +803,11 @@ def command_statements(args, database: Database) -> int:
         files.append((path.name, path.read_bytes()))
 
     preview = preview_files(
-        database, files, month=args.month, all_dates=args.all_dates
+        database,
+        files,
+        month=statement_month,
+        all_dates=args.all_dates,
+        ignore_imported=args.replace or args.erase,
     )
     symbol = database.currency_symbol
     print(

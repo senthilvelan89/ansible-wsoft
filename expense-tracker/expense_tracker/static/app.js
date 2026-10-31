@@ -699,11 +699,25 @@ function wireOrderPages() {
 
 const statementState = { lines: [], categories: [] };
 
-function lastMonthValue() {
+function monthValue(offset = 0) {
   const now = new Date();
-  const date = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const date = new Date(now.getFullYear(), now.getMonth() + offset, 1);
   const month = String(date.getMonth() + 1).padStart(2, "0");
   return `${date.getFullYear()}-${month}`;
+}
+
+function lastMonthValue() {
+  return monthValue(-1);
+}
+
+function thisMonthValue() {
+  return monthValue(0);
+}
+
+function monthLabelFromValue(value) {
+  if (!value) return "this month";
+  const [year, month] = value.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleString(undefined, { month: "long", year: "numeric" });
 }
 
 function fillStatementCategories(selected) {
@@ -828,10 +842,10 @@ function renderStatementPreview(data) {
     "Ready rows import as-is. Highlighted rows wait until you pick a category. Leave them blank to ask again next time.";
 }
 
-function collectStatementDecisions() {
+function collectStatementDecisions(includeDuplicates = false) {
   const items = [];
   for (const line of statementState.lines) {
-    if (line.status === "duplicate") continue;
+    if (line.status === "duplicate" && !includeDuplicates) continue;
     const select = document.querySelector(`select.review-category[data-fp="${line.fingerprint}"]`);
     const rememberInput = document.querySelector(`input[data-remember="${line.fingerprint}"]`);
     const remember = rememberInput ? rememberInput.value.trim() : "";
@@ -875,7 +889,7 @@ async function loadClues() {
 }
 
 function wireStatementsPage() {
-  $("statement-month").value = lastMonthValue();
+  $("statement-month").value = thisMonthValue();
   const drop = $("statement-drop");
   const filesInput = $("statement-files");
   const names = $("statement-file-names");
@@ -911,6 +925,7 @@ function wireStatementsPage() {
     }
     const body = new FormData();
     body.append("month", $("statement-month").value);
+    if ($("statement-replace").checked) body.append("replace", "1");
     files.forEach((file) => body.append("files", file));
     try {
       const response = await fetch("/api/statements/preview", {
@@ -929,22 +944,53 @@ function wireStatementsPage() {
     }
   });
   $("statement-commit").addEventListener("click", async () => {
-    const items = collectStatementDecisions();
+    const replace = $("statement-replace").checked;
+    const month = $("statement-month").value;
+    const items = collectStatementDecisions(replace);
     if (!items.length) {
       toast("Nothing to add — pick categories on the highlighted rows", true);
       return;
     }
+    if (replace) {
+      const label = monthLabelFromValue(month);
+      if (
+        !confirm(
+          `Erase every personal expense in ${label}, then add these statement rows? Food orders are kept.`
+        )
+      ) {
+        return;
+      }
+    }
     try {
       const result = await api("/api/statements/commit", {
         method: "POST",
-        body: JSON.stringify({ items }),
+        body: JSON.stringify({ items, replace, month }),
       });
-      toast(`Imported ${result.imported}, skipped ${result.skipped}, remembered ${result.remembered} clue(s)`);
+      const erased = result.erased ? ` Erased ${result.erased} existing. ` : " ";
+      toast(
+        `Imported ${result.imported}, skipped ${result.skipped}, remembered ${result.remembered} clue(s).${erased}`.trim()
+      );
       statementState.lines = [];
       $("statement-review").replaceChildren(empty("Imported. Drop next month's statements when they arrive."));
       $("statement-actions").classList.add("hidden");
       $("statement-summary").classList.add("hidden");
       await loadClues();
+    } catch (error) {
+      toast(error.message, true);
+    }
+  });
+  $("statement-erase").addEventListener("click", async () => {
+    const month = $("statement-month").value;
+    const label = monthLabelFromValue(month);
+    if (!confirm(`Erase every personal expense in ${label}? Food orders are kept. This cannot be undone.`)) {
+      return;
+    }
+    try {
+      const result = await api("/api/statements/erase", {
+        method: "POST",
+        body: JSON.stringify({ month }),
+      });
+      toast(`Erased ${result.erased} expense(s) for ${result.month.label}`);
     } catch (error) {
       toast(error.message, true);
     }

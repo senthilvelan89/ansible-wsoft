@@ -159,6 +159,13 @@ Or from the command line:
 expenses statements --month last ~/Downloads/cba-sep.pdf ~/Downloads/anz-sep.pdf
 ```
 
+To throw away a month of typed expenses and file the bank PDFs instead (food
+orders are not touched):
+
+```bash
+expenses statements --replace --month 2026-10 ~/Downloads/cba-oct.pdf ~/Downloads/anz-oct.pdf
+```
+
 Known merchants are filed from **clues** (longest matching text wins). A starter
 list lives in `statement-clues.csv` — Costco, Woolworths, fuel brands, insurers
 and so on. Anything the clues cannot place is left for you to assign. When you

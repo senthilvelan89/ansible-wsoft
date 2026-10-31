@@ -304,11 +304,41 @@ def build_handler(database: Database):
 
             if path == "/api/statements/preview" and method == "POST":
                 return self._statements_preview()
+            if path == "/api/statements/erase" and method == "POST":
+                payload = self._read_json()
+                month = str(payload.get("month") or "").strip()
+                if not month:
+                    raise ApiError("Say which month to erase, for example 2026-10")
+                start, end = resolve_range(month=month)
+                if not start or not end:
+                    raise ApiError("Say which month to erase, for example 2026-10")
+                wiped = database.erase_month(start, end)
+                return self._send_json(
+                    {
+                        "month": {
+                            "start": format_date(start),
+                            "end": format_date(end),
+                            "label": start.strftime("%B %Y"),
+                        },
+                        "erased": wiped["expenses"],
+                        "cleared_imports": wiped["imports"],
+                    }
+                )
             if path == "/api/statements/commit" and method == "POST":
                 payload = self._read_json()
                 items = payload.get("items")
                 if not isinstance(items, list) or not items:
                     raise ApiError("Nothing to import")
+                if payload.get("replace"):
+                    month = str(payload.get("month") or "").strip()
+                    if not month:
+                        raise ApiError("Say which month to replace, for example 2026-10")
+                    start, end = resolve_range(month=month)
+                    if not start or not end:
+                        raise ApiError("Say which month to replace, for example 2026-10")
+                    wiped = database.erase_month(start, end)
+                else:
+                    wiped = {"expenses": 0, "imports": 0}
                 result = commit_proposals(database, items)
                 return self._send_json(
                     {
@@ -316,6 +346,7 @@ def build_handler(database: Database):
                         "skipped": result.skipped,
                         "remembered": result.remembered,
                         "expense_ids": result.expense_ids,
+                        "erased": wiped["expenses"],
                     }
                 )
             if path == "/api/statements/clues":
@@ -350,11 +381,13 @@ def build_handler(database: Database):
             content_type = self.headers.get("Content-Type") or ""
             month = "last"
             all_dates = False
+            replace = False
             files = []
             if "multipart/form-data" in content_type:
                 fields, uploads = self._read_multipart()
                 month = (fields.get("month") or "last").strip() or "last"
                 all_dates = str(fields.get("all_dates") or "").strip().lower() in {"1", "true", "yes"}
+                replace = str(fields.get("replace") or "").strip().lower() in {"1", "true", "yes"}
                 for upload in uploads:
                     filename = upload["filename"] or "statement"
                     files.append((filename, upload["data"]))
@@ -362,6 +395,7 @@ def build_handler(database: Database):
                 payload = self._read_json()
                 month = str(payload.get("month") or "last")
                 all_dates = bool(payload.get("all_dates"))
+                replace = bool(payload.get("replace"))
                 for raw in payload.get("files") or []:
                     if not isinstance(raw, dict):
                         continue
@@ -376,10 +410,13 @@ def build_handler(database: Database):
                         files.append((name, base64.b64decode(data)))
             if not files:
                 raise ApiError("Drop one or more bank statement files")
-            preview = preview_files(database, files, month=month, all_dates=all_dates)
+            preview = preview_files(
+                database, files, month=month, all_dates=all_dates, ignore_imported=replace
+            )
             payload = preview.to_dict(database.currency_symbol)
             payload["categories"] = database.categories()
             payload["clues"] = database.list_statement_clues()
+            payload["replace"] = replace
             return self._send_json(payload)
 
         def _food_order_api(self, method: str, path: str, symbol: str) -> None:

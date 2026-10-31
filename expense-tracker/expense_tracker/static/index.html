@@ -266,20 +266,27 @@
       <h2>Bank statements</h2>
       <span class="pill" id="statements-pill">Last month</span>
     </div>
-    <p class="muted">On the 5th, drop in every account's previous-month PDF (CSV, OFX and QIF work too). Known merchants are filed from your clues. Anything unclear waits here so you can pick the category &mdash; that choice can be remembered for next month.</p>
+    <p class="muted">On the 5th, drop in every account's previous-month PDF (CSV, OFX and QIF work too). Known merchants are filed from your clues. Anything unclear waits here so you can pick the category &mdash; that choice can be remembered for next month. Tick <strong>Replace this month</strong> to wipe that month's typed expenses first (food orders stay).</p>
 
     <form id="statement-upload" class="statement-upload" autocomplete="off">
       <label class="field date-field">
         <span>Month</span>
         <input type="month" id="statement-month" required>
       </label>
+      <label class="check-field" for="statement-replace">
+        <input type="checkbox" id="statement-replace" checked>
+        <span>Replace this month &mdash; erase existing personal expenses, then file the statements</span>
+      </label>
       <label class="dropzone" id="statement-drop">
-        <input type="file" id="statement-files" multiple accept=".pdf,.csv,.ofx,.qfx,.qif,.txt,application/pdf,text/csv">
+        <input type="file" id="statement-files" multiple accept=".pdf,.csv,.ofx,.qif,.txt,application/pdf,text/csv">
         <strong>Drop statements here</strong>
         <span>or click to choose several files</span>
         <em id="statement-file-names">No files chosen</em>
       </label>
-      <button type="submit" class="button primary" id="statement-read">Read statements</button>
+      <div class="statement-buttons">
+        <button type="submit" class="button primary" id="statement-read">Read statements</button>
+        <button type="button" class="button ghost" id="statement-erase">Erase month only</button>
+      </div>
     </form>
     <p class="muted" id="statement-errors"></p>
 
