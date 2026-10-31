@@ -244,6 +244,11 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help="load clues from a CSV with pattern,category columns",
     )
+    statements.add_argument(
+        "--dump-text",
+        action="store_true",
+        help="print the text read from each PDF and stop (for debugging)",
+    )
     statements.set_defaults(handler=command_statements)
 
     prune = add_command(
@@ -738,6 +743,21 @@ def command_import(args, database: Database) -> int:
 
 
 def command_statements(args, database: Database) -> int:
+    if getattr(args, "dump_text", False):
+        if not args.paths:
+            raise StorageError("Pass the PDF files after --dump-text")
+        from .pdf_text import extract_pdf_text
+
+        for raw in args.paths:
+            path = Path(raw).expanduser()
+            if not path.exists():
+                raise StorageError("No such file: %s" % path)
+            data = path.read_bytes()
+            text = extract_pdf_text(data) if path.suffix.lower() == ".pdf" or data.lstrip().startswith(b"%PDF") else data.decode("utf-8-sig", errors="replace")
+            print("===== %s (%d characters) =====" % (path.name, len(text)))
+            print(text.strip() or "(no readable text)")
+            print()
+        return 0
     if args.import_clues:
         path = Path(args.import_clues).expanduser()
         with path.open("r", encoding="utf-8", newline="") as handle:

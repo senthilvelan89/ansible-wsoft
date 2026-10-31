@@ -48,25 +48,34 @@ _MONTH_ABBR = {
     "december": 12,
 }
 
+_MONTH_PAT = (
+    r"jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|"
+    r"jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?"
+)
+_WEEKDAY_PAT = (
+    r"mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:rs(?:day)?)?|"
+    r"fri(?:day)?|sat(?:urday)?|sun(?:day)?"
+)
 _DATE_NUMERIC = re.compile(
     r"\b(?P<a>\d{1,4})[/\-.](?P<b>\d{1,2})[/\-.](?P<c>\d{2,4})\b"
 )
 _DATE_NAMED = re.compile(
-    r"\b(?P<d>\d{1,2})[.\s\-]+(?P<mon>jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?"
-    r"|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?"
-    r"|nov(?:ember)?|dec(?:ember)?)[.\s\-]+(?P<y>\d{2,4})\b",
+    r"\b(?:(?:%s)\s+)?(?P<d>\d{1,2})[.\s\-]+(?P<mon>%s)[.\s\-]+(?P<y>\d{2,4})\b"
+    % (_WEEKDAY_PAT, _MONTH_PAT),
     re.I,
 )
 _DATE_NAMED_SHORT = re.compile(
-    r"\b(?P<d>\d{1,2})[.\s\-]+(?P<mon>jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?"
-    r"|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?"
-    r"|nov(?:ember)?|dec(?:ember)?)\b",
+    r"\b(?:(?:%s)\s+)?(?P<d>\d{1,2})[.\s\-]+(?P<mon>%s)\b" % (_WEEKDAY_PAT, _MONTH_PAT),
+    re.I,
+)
+_DATE_MONTH_FIRST = re.compile(
+    r"\b(?P<mon>%s)[.\s\-]+(?P<d>\d{1,2})(?:,)?[.\s\-]+(?P<y>\d{2,4})\b" % _MONTH_PAT,
     re.I,
 )
 _AMOUNT = re.compile(
-    r"(?<![\w.])(?P<sign>[+-])?(?P<cur>\$|aud)?"
+    r"(?<![\w.])(?P<sign>[+\-\u2212\u2013])?\s*(?P<cur>\$|aud)?\s*"
     r"(?P<num>\d{1,3}(?:,\d{3})*(?:\.\d{2})|\d+\.\d{2})"
-    r"(?P<suf>\s*(?:cr|dr))?",
+    r"(?:\s*(?P<suf>cr|dr))?",
     re.I,
 )
 _OFX_TRN = re.compile(
@@ -207,6 +216,12 @@ def parse_statement_date(value, default_year: Optional[int] = None) -> dt.date:
         month = _MONTH_ABBR[named.group("mon").lower()]
         return dt.date(year, month, int(named.group("d")))
 
+    month_first = _DATE_MONTH_FIRST.search(text)
+    if month_first:
+        year = _century(month_first.group("y"))
+        month = _MONTH_ABBR[month_first.group("mon").lower()]
+        return dt.date(year, month, int(month_first.group("d")))
+
     numeric = _DATE_NUMERIC.search(text)
     if numeric:
         a, b, c = int(numeric.group("a")), int(numeric.group("b")), int(numeric.group("c"))
@@ -234,7 +249,9 @@ def parse_statement_file(path: Path) -> List[RawLine]:
     return parse_statement_bytes(data, Path(path).name)
 
 
-def parse_statement_bytes(data: bytes, filename: str) -> List[RawLine]:
+def parse_statement_bytes(
+    data: bytes, filename: str, default_year: Optional[int] = None
+) -> List[RawLine]:
     name = filename or "statement"
     lower = name.lower()
     if lower.endswith((".ofx", ".qfx", ".ofc")) or b"<OFX" in data[:400] or b"<ofx" in data[:400]:
@@ -250,21 +267,40 @@ def parse_statement_bytes(data: bytes, filename: str) -> List[RawLine]:
         if not text.strip():
             raise StorageError(
                 "%s looks like a PDF but no text could be read. "
-                "Export a CSV from the bank, or install pdftotext (poppler)."
+                "These CommBank/ANZ 'Transactions.pdf' files are often a picture. "
+                "Export CSV from the bank instead (Account → Transactions → Export → CSV)."
                 % name
             )
-        return parse_statement_text(text, name)
+        lines = parse_statement_text(text, name, default_year)
+        if lines:
+            return lines
+        raise StorageError(_empty_parse_message(name, text))
     text = data.decode("utf-8-sig", errors="replace")
-    lines = parse_statement_text(text, name)
+    lines = parse_statement_text(text, name, default_year)
     if lines:
         return lines
-    raise StorageError("Could not find any transactions in %s" % name)
+    raise StorageError(_empty_parse_message(name, text))
 
 
 def parse_statement_text(text: str, filename: str, default_year: Optional[int] = None) -> List[RawLine]:
-    lines: List[RawLine] = []
+    year = _infer_year(text, default_year)
     seen = set()
-    year = default_year
+    lines: List[RawLine] = []
+    for parsed in _parse_line_by_line(text, filename, year) + _parse_date_spans(
+        text, filename, year
+    ):
+        key = (parsed.spent_on, parsed.amount_cents, _normalise(parsed.description))
+        if key in seen:
+            continue
+        seen.add(key)
+        lines.append(parsed)
+    lines.sort(key=lambda row: (row.spent_on, row.description))
+    return lines
+
+
+def _parse_line_by_line(text: str, filename: str, year: Optional[int]) -> List[RawLine]:
+    lines: List[RawLine] = []
+    current_year = year
     for raw_line in text.splitlines():
         collapsed = re.sub(r"[ \t]+", " ", raw_line).strip()
         if not collapsed:
@@ -272,15 +308,56 @@ def parse_statement_text(text: str, filename: str, default_year: Optional[int] =
         lower = collapsed.lower()
         if any(hint in lower for hint in _SKIP_HINTS):
             continue
-        parsed = _line_from_text(collapsed, filename, year)
+        parsed = _line_from_text(collapsed, filename, current_year)
         if parsed is None:
             continue
-        year = parsed.spent_on.year
-        key = (parsed.spent_on, parsed.amount_cents, _normalise(parsed.description))
-        if key in seen:
-            continue
-        seen.add(key)
+        current_year = parsed.spent_on.year
         lines.append(parsed)
+    return lines
+
+
+def _parse_date_spans(text: str, filename: str, year: Optional[int]) -> List[RawLine]:
+    """Pair each date with the description and amounts until the next date.
+
+    CommBank 'Transactions.pdf' prints the date on one line, the merchant on
+    the next, and the amount after that.
+    """
+
+    dates = _find_dates(text, year)
+    if not dates:
+        return []
+    lines: List[RawLine] = []
+    for index, (start, end, spent_on, raw_date) in enumerate(dates):
+        block_end = dates[index + 1][0] if index + 1 < len(dates) else len(text)
+        block = text[end:block_end]
+        if any(hint in block.lower() for hint in _SKIP_HINTS):
+            continue
+        amounts = []
+        for match in _AMOUNT.finditer(block):
+            parsed_amount = _cents_from_match(match)
+            if parsed_amount is None:
+                continue
+            amounts.append(parsed_amount)
+        if not amounts:
+            continue
+        txn_cents, suffix, _ = amounts[0]
+        description = _clean_description(_AMOUNT.sub(" ", block))
+        description = _strip_header_noise(description)
+        if not description:
+            description = raw_date
+        credit = suffix == "cr" or any(hint in description.lower() for hint in _CREDIT_HINTS)
+        if suffix == "dr" or txn_cents < 0:
+            credit = False
+        lines.append(
+            RawLine(
+                spent_on=spent_on,
+                description=description,
+                amount_cents=abs(int(txn_cents)),
+                credit=credit,
+                source=filename,
+                raw=("%s %s" % (raw_date, block)).strip(),
+            )
+        )
     return lines
 
 
@@ -370,9 +447,11 @@ def preview_files(
     for filename, data in files:
         preview.files.append(filename)
         try:
-            parsed = parse_statement_bytes(data, filename)
+            parsed = parse_statement_bytes(
+                data, filename, default_year=start.year if start else None
+            )
         except (ParseError, StorageError, OSError, ValueError) as error:
-            preview.errors.append("%s: %s" % (filename, error))
+            preview.errors.append("%s" % error)
             continue
         if not parsed:
             preview.errors.append("%s: no transactions found" % filename)
@@ -517,37 +596,99 @@ def _stored_amount(amount_cents: int, credit: bool, category: str) -> int:
     return cents
 
 
-def _line_from_text(line: str, filename: str, default_year: Optional[int]) -> Optional[RawLine]:
-    date_value = None
-    date_span = None
-    named = _DATE_NAMED.search(line)
-    numeric = _DATE_NUMERIC.search(line)
-    short = _DATE_NAMED_SHORT.search(line)
+def _find_dates(text: str, default_year: Optional[int]) -> List[Tuple[int, int, dt.date, str]]:
+    found: List[Tuple[int, int, dt.date, str]] = []
+    for regex in (_DATE_NAMED, _DATE_MONTH_FIRST, _DATE_NUMERIC, _DATE_NAMED_SHORT):
+        for match in regex.finditer(text):
+            try:
+                value = parse_statement_date(match.group(0), default_year)
+            except (ParseError, ValueError):
+                continue
+            found.append((match.start(), match.end(), value, match.group(0)))
+    found.sort(key=lambda item: (item[0], -(item[1] - item[0])))
+    resolved: List[Tuple[int, int, dt.date, str]] = []
+    last_end = -1
+    for start, end, value, raw in found:
+        if start < last_end:
+            continue
+        resolved.append((start, end, value, raw))
+        last_end = end
+    return resolved
+
+
+def _infer_year(text: str, default_year: Optional[int]) -> Optional[int]:
+    if default_year:
+        return int(default_year)
+    years = re.findall(r"\b(20\d{2})\b", text or "")
+    if years:
+        return int(years[0])
+    return today().year
+
+
+def _cents_from_match(match) -> Optional[Tuple[int, str, int]]:
+    sign = match.group("sign") or ""
+    if sign in {"\u2212", "\u2013", "-"}:
+        sign = "-"
+    elif sign != "+":
+        sign = ""
     try:
-        if named:
-            date_value = parse_statement_date(named.group(0), default_year)
-            date_span = named.span()
-        elif numeric:
-            date_value = parse_statement_date(numeric.group(0), default_year)
-            date_span = numeric.span()
-        elif short and default_year:
-            date_value = parse_statement_date(short.group(0), default_year)
-            date_span = short.span()
-    except (ParseError, ValueError):
+        cents = parse_amount(sign + match.group("num"))
+    except ParseError:
         return None
-    if date_value is None:
+    suffix = (match.group("suf") or "").strip().lower()
+    return cents, suffix, match.start()
+
+
+def _excerpt(text: str, limit: int = 700) -> str:
+    lines = [re.sub(r"[ \t]+", " ", line).rstrip() for line in (text or "").splitlines()]
+    lines = [line for line in lines if line.strip()][:18]
+    body = "\n".join(lines)
+    if len(body) > limit:
+        body = body[:limit].rstrip() + "…"
+    return body
+
+
+def _empty_parse_message(name: str, text: str) -> str:
+    excerpt = _excerpt(text)
+    letters = sum(1 for ch in text if ch.isalpha())
+    if letters < 12:
+        return (
+            "%s: this PDF has no readable transaction text (likely a scan). "
+            "Export CSV from the bank instead — Account → Transactions → Export → CSV."
+            % name
+        )
+    return (
+        "%s: no transactions found. Extracted text starts with:\n%s\n"
+        "If that is not a transaction list, export CSV from the bank instead."
+        % (name, excerpt)
+    )
+
+
+def _strip_header_noise(text: str) -> str:
+    cleaned = re.sub(
+        r"\b(date|description|debit|credit|balance|completed|pending|transactions?|"
+        r"details|money out|money in|account|statement|page \d+|aud)\b",
+        " ",
+        text or "",
+        flags=re.I,
+    )
+    return _clean_description(cleaned)
+
+
+def _line_from_text(line: str, filename: str, default_year: Optional[int]) -> Optional[RawLine]:
+    dates = _find_dates(line, default_year)
+    if not dates:
         return None
+    date_start, date_end, date_value, _raw_date = dates[0]
 
     amounts = []
     for match in _AMOUNT.finditer(line):
-        if date_span and match.start() < date_span[1]:
+        if match.start() < date_end:
             continue
-        try:
-            cents = parse_amount((match.group("sign") or "") + match.group("num"))
-        except ParseError:
+        parsed_amount = _cents_from_match(match)
+        if parsed_amount is None:
             continue
-        suffix = (match.group("suf") or "").strip().lower()
-        amounts.append((cents, suffix, match.start()))
+        amounts.append(parsed_amount)
     if not amounts:
         return None
 
@@ -567,16 +708,14 @@ def _line_from_text(line: str, filename: str, default_year: Optional[int]) -> Op
     else:
         txn_cents, suffix, _ = amounts[0]
 
-    body = line
-    if date_span:
-        body = (line[: date_span[0]] + " " + line[date_span[1] :]).strip()
+    body = (line[:date_start] + " " + line[date_end:]).strip()
     body = _AMOUNT.sub(" ", body)
-    description = _clean_description(body)
+    description = _strip_header_noise(body)
     if not description:
         return None
 
-    credit = suffix == "cr" or txn_cents < 0 or any(hint in description.lower() for hint in _CREDIT_HINTS)
-    if suffix == "dr":
+    credit = suffix == "cr" or any(hint in description.lower() for hint in _CREDIT_HINTS)
+    if suffix == "dr" or txn_cents < 0:
         credit = False
     return RawLine(
         spent_on=date_value,

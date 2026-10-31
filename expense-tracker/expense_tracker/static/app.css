@@ -446,6 +446,7 @@ td.date { white-space: nowrap; color: var(--muted); font-variant-numeric: tabula
 .review-row.needs { background: var(--accent-soft); }
 .review-row.skip td, .review-row.duplicate td { color: var(--muted); }
 .review-note { display: block; color: var(--muted); font-size: 12px; }
+#statement-errors { white-space: pre-wrap; color: var(--danger); }
 select.review-category { min-width: 140px; }
 
 @media (max-width: 900px) {

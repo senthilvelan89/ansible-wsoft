@@ -17,7 +17,8 @@ import zlib
 from pathlib import Path
 from typing import List
 
-_STREAM_RE = re.compile(rb"stream\r?\n(.*?)\r?\nendstream", re.DOTALL)
+_STREAM_RE = re.compile(rb"stream(?:\r\n|\n|\r)(.*?)\r?\nendstream", re.DOTALL)
+_LITERAL_RE = re.compile(rb"\((?:\\.|[^\\)])*\)")
 _TOKEN_RE = re.compile(
     rb"("
     rb"\((?:\\.|[^\\)])*\)"  # literal string
@@ -65,13 +66,30 @@ def _pdftotext(data: bytes) -> str:
 
 def _extract_from_streams(data: bytes) -> str:
     chunks: List[str] = []
+    literals: List[str] = []
     for match in _STREAM_RE.finditer(data):
         payload = match.group(1)
         decoded = _inflate(payload)
         text = _strings_from_content(decoded)
         if text.strip():
             chunks.append(text)
-    return "\n".join(chunks)
+        dumped = _all_literals(decoded)
+        if dumped.strip():
+            literals.append(dumped)
+    joined = "\n".join(chunks).strip()
+    if len(joined) >= 40:
+        return joined
+    fallback = "\n".join(literals).strip()
+    return joined or fallback
+
+
+def _all_literals(content: bytes) -> str:
+    parts = []
+    for match in _LITERAL_RE.finditer(content):
+        piece = _decode_pdf_string(match.group(0))
+        if piece.strip():
+            parts.append(piece)
+    return " ".join(parts)
 
 
 def _inflate(payload: bytes) -> bytes:
