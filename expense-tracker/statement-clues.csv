@@ -181,6 +181,16 @@ credit card payment,SKIP
 visa payment,SKIP
 mastercard payment,SKIP
 transfer to savings,SKIP
+transfer from savings,SKIP
+transfer to offset,SKIP
+transfer from offset,SKIP
+transfer to xx,SKIP
+transfer from xx,SKIP
 tfr own,SKIP
 internet tfr,SKIP
 internal transfer,SKIP
+account transfer,SKIP
+between accounts,SKIP
+netbank transfer,SKIP
+commbank app transfer,SKIP
+funds transfer,SKIP

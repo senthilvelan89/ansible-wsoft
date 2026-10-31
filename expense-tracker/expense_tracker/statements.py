@@ -129,6 +129,38 @@ _SKIP_HINTS = (
     "balance brought",
     "balance carried",
 )
+_ACCOUNT_MASK = re.compile(r"\bxx\d{3,6}\b", re.I)
+_OWN_TRANSFER_PHRASES = (
+    "internal transfer",
+    "tfr own",
+    "between accounts",
+    "account transfer",
+    "a/c transfer",
+    "ac transfer",
+    "funds transfer",
+    "own account",
+    "my account",
+    "to my savings",
+    "from my savings",
+    "to savings",
+    "from savings",
+    "to offset",
+    "from offset",
+    "to everyday",
+    "from everyday",
+    "to transaction account",
+    "from transaction account",
+    "netbank transfer",
+    "commbank app transfer",
+)
+_TRANSFER_VERBS = (
+    "transfer to",
+    "transfer from",
+    "tfr to",
+    "tfr from",
+    "transferred to",
+    "transferred from",
+)
 
 
 @dataclass
@@ -386,22 +418,27 @@ def propose_lines(
         status = "review"
         reason = "No clue matched — pick a category"
 
-        match = _best_clue(item, clues)
-        if match:
-            clue = match["pattern"]
-            remember = match["pattern"]
-            if match["skip"] or match["category"].upper() == SKIP_CATEGORY:
-                status = "skip"
-                category = SKIP_CATEGORY
-                reason = "Clue %r is marked skip" % match["pattern"]
-            else:
-                category = match["category"]
-                status = "ready"
-                reason = "Matched clue %r" % match["pattern"]
-        elif line.credit:
-            category = INCOME_CATEGORY
-            status = "review"
-            reason = "Looks like money in — confirm it is Income, or pick another category"
+        if _looks_like_own_transfer(item):
+            status = "skip"
+            category = SKIP_CATEGORY
+            reason = "Internal transfer between your accounts"
+        else:
+            match = _best_clue(item, clues)
+            if match:
+                clue = match["pattern"]
+                remember = match["pattern"]
+                if match["skip"] or match["category"].upper() == SKIP_CATEGORY:
+                    status = "skip"
+                    category = SKIP_CATEGORY
+                    reason = "Clue %r is marked skip" % match["pattern"]
+                else:
+                    category = match["category"]
+                    status = "ready"
+                    reason = "Matched clue %r" % match["pattern"]
+            elif line.credit:
+                category = INCOME_CATEGORY
+                status = "review"
+                reason = "Looks like money in — confirm it is Income, or pick another category"
 
         if mark in already:
             status = "duplicate"
@@ -428,6 +465,7 @@ def propose_lines(
                 expense_id=already.get(mark, {}).get("expense_id") if mark in already else None,
             )
         )
+    _mark_crossed_account_transfers(proposed)
     proposed.sort(key=lambda row: (row.date, row.item))
     return proposed
 
@@ -570,6 +608,67 @@ def load_default_clues() -> List[Tuple[str, str, bool]]:
             skip = category.upper() == SKIP_CATEGORY or str(raw.get("skip") or "").strip() in {"1", "true", "yes"}
             rows.append((pattern, "" if skip else category, skip))
     return rows
+
+
+def _looks_like_own_transfer(description: str) -> bool:
+    """True for money moved between the user's own accounts, not a spend."""
+
+    text = " %s " % _normalise(description)
+    raw = (description or "").lower()
+    if any(_normalise(phrase) and " %s " % _normalise(phrase) in text for phrase in _OWN_TRANSFER_PHRASES):
+        return True
+    is_transfer = any(verb in raw for verb in _TRANSFER_VERBS)
+    if not is_transfer:
+        return False
+    if _ACCOUNT_MASK.search(raw):
+        return True
+    return any(word in raw for word in ("savings", "offset", "everyday", "own account", "my account"))
+
+
+def _mark_crossed_account_transfers(lines: List[ProposedLine]) -> None:
+    """Skip a debit on one statement that lands as a credit on another.
+
+    That is just money moving between your accounts; the account that later
+    paid the merchant still has the real expense.
+    """
+
+    open_rows = [line for line in lines if line.status != "duplicate"]
+    used = set()
+    for debit in open_rows:
+        if debit.fingerprint in used or debit.credit:
+            continue
+        debit_date = parse_statement_date(debit.date)
+        partner = None
+        for credit in open_rows:
+            if credit.fingerprint in used or credit.fingerprint == debit.fingerprint:
+                continue
+            if not credit.credit:
+                continue
+            if abs(int(credit.amount_cents)) != abs(int(debit.amount_cents)):
+                continue
+            if credit.source == debit.source and not _looks_like_own_transfer(credit.item):
+                continue
+            delta = abs((parse_statement_date(credit.date) - debit_date).days)
+            if delta > 1:
+                continue
+            partner = credit
+            break
+        if partner is None:
+            continue
+        used.add(debit.fingerprint)
+        used.add(partner.fingerprint)
+        debit.status = "skip"
+        debit.category = SKIP_CATEGORY
+        debit.reason = "Internal transfer — matched %s on %s" % (
+            partner.amount_display,
+            partner.source,
+        )
+        partner.status = "skip"
+        partner.category = SKIP_CATEGORY
+        partner.reason = "Internal transfer — matched %s on %s" % (
+            debit.amount_display,
+            debit.source,
+        )
 
 
 def _best_clue(description: str, clues: Sequence[Dict[str, object]]) -> Optional[Dict[str, object]]:

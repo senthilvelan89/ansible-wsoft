@@ -363,6 +363,7 @@ class Database(FoodOrderMixin):
         self._seed_category_limits(connection, stamp)
         self._ensure_statement_schema(connection)
         self._seed_statement_clues(connection, stamp)
+        self._ensure_transfer_skip_clues(connection, stamp)
         self.ensure_order_schema(connection)
 
     def _ensure_statement_schema(self, connection: sqlite3.Connection) -> None:
@@ -1066,6 +1067,31 @@ class Database(FoodOrderMixin):
             "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
             (CLUES_SEED_KEY, stamp),
         )
+
+    def _ensure_transfer_skip_clues(self, connection, stamp: str) -> None:
+        """Add skip clues for own-account transfers on existing databases."""
+
+        for pattern in (
+            "transfer to savings",
+            "transfer from savings",
+            "transfer to offset",
+            "transfer from offset",
+            "transfer to xx",
+            "transfer from xx",
+            "tfr own",
+            "internet tfr",
+            "internal transfer",
+            "account transfer",
+            "between accounts",
+            "netbank transfer",
+            "commbank app transfer",
+            "funds transfer",
+        ):
+            connection.execute(
+                "INSERT OR IGNORE INTO statement_clues (pattern, category, skip, created_at) "
+                "VALUES (?, '', 1, ?)",
+                (pattern, stamp),
+            )
 
     def list_statement_clues(self) -> List[Dict[str, object]]:
         with self._connect() as connection:
