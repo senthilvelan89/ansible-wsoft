@@ -401,9 +401,42 @@ td.date { white-space: nowrap; color: var(--muted); font-variant-numeric: tabula
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .toast.error { background: var(--danger); color: #fff; }
 
+.statement-upload {
+  display: grid;
+  grid-template-columns: 160px 1fr auto;
+  gap: 12px;
+  align-items: end;
+  margin: 16px 0 8px;
+}
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1.5px dashed var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--bg);
+  cursor: pointer;
+  position: relative;
+}
+.dropzone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.dropzone strong { font-size: 14px; }
+.dropzone span, .dropzone em { color: var(--muted); font-size: 12.5px; font-style: normal; }
+.dropzone.drag { border-color: var(--accent); background: var(--accent-soft); }
+.review-row.needs { background: var(--accent-soft); }
+.review-row.skip td, .review-row.duplicate td { color: var(--muted); }
+.review-note { display: block; color: var(--muted); font-size: 12px; }
+select.review-category { min-width: 140px; }
+
 @media (max-width: 900px) {
   main { grid-template-columns: 1fr; padding: 16px; }
   .topbar { padding: 14px 16px; flex-wrap: wrap; }
   .nav { margin-left: 48px; }
   .stat-grid, .split { grid-template-columns: 1fr; }
+  .statement-upload { grid-template-columns: 1fr; }
 }

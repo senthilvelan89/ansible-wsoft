@@ -11,13 +11,14 @@ from __future__ import annotations
 import io
 import json
 import datetime as dt
+import re
 import threading
 import webbrowser
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
-from urllib.parse import parse_qs, urlparse
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import parse_qs, urlparse, unquote
 
 from . import __version__
 from .parsing import (
@@ -30,11 +31,13 @@ from .parsing import (
     resolve_range,
     today,
 )
+from .statements import commit_proposals, preview_files
 from .storage import BUDGET_START, Database, StorageError
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 GUARD_HEADER = "X-Expense-Tracker"
 MAX_BODY_BYTES = 1 << 20
+MAX_UPLOAD_BYTES = 32 << 20
 
 
 class ApiError(Exception):
@@ -74,13 +77,18 @@ def build_handler(database: Database):
             body = json.dumps(payload, default=str).encode("utf-8")
             self._send(status, body, "application/json; charset=utf-8")
 
-        def _read_json(self) -> Dict[str, Any]:
+        def _read_body(self, limit: int = MAX_BODY_BYTES) -> bytes:
             length = int(self.headers.get("Content-Length") or 0)
             if length <= 0:
-                return {}
-            if length > MAX_BODY_BYTES:
+                return b""
+            if length > limit:
                 raise ApiError("Request body is too large", HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
-            raw = self.rfile.read(length)
+            return self.rfile.read(length)
+
+        def _read_json(self) -> Dict[str, Any]:
+            raw = self._read_body()
+            if not raw:
+                return {}
             try:
                 payload = json.loads(raw.decode("utf-8"))
             except (UnicodeDecodeError, json.JSONDecodeError):
@@ -88,6 +96,11 @@ def build_handler(database: Database):
             if not isinstance(payload, dict):
                 raise ApiError("Request body must be a JSON object")
             return payload
+
+        def _read_multipart(self):
+            content_type = self.headers.get("Content-Type") or ""
+            raw = self._read_body(MAX_UPLOAD_BYTES)
+            return _parse_multipart(raw, content_type)
 
         # --------------------------------------------------------- routing
 
@@ -118,7 +131,8 @@ def build_handler(database: Database):
                     raise ApiError("Missing %s header" % GUARD_HEADER, HTTPStatus.FORBIDDEN)
 
                 if method == "GET" and (
-                    path in {"/", "/index.html", "/orders"} or path.startswith("/orders/")
+                    path in {"/", "/index.html", "/orders", "/statements"}
+                    or path.startswith("/orders/")
                 ):
                     return self._serve_page()
                 if method == "GET" and path == "/app.js":
@@ -288,7 +302,85 @@ def build_handler(database: Database):
                 orders = database.list_food_orders(start=start, end=end)
                 return self._send_json(_order_list_payload(database, orders, symbol))
 
+            if path == "/api/statements/preview" and method == "POST":
+                return self._statements_preview()
+            if path == "/api/statements/commit" and method == "POST":
+                payload = self._read_json()
+                items = payload.get("items")
+                if not isinstance(items, list) or not items:
+                    raise ApiError("Nothing to import")
+                result = commit_proposals(database, items)
+                return self._send_json(
+                    {
+                        "imported": result.imported,
+                        "skipped": result.skipped,
+                        "remembered": result.remembered,
+                        "expense_ids": result.expense_ids,
+                    }
+                )
+            if path == "/api/statements/clues":
+                if method == "GET":
+                    return self._send_json({"clues": database.list_statement_clues()})
+                if method == "POST":
+                    payload = self._read_json()
+                    clue = database.upsert_statement_clue(
+                        payload.get("pattern") or payload.get("clue") or "",
+                        payload.get("category") or "",
+                        skip=bool(payload.get("skip")),
+                    )
+                    return self._send_json(
+                        {"clue": clue, "clues": database.list_statement_clues()},
+                        HTTPStatus.CREATED,
+                    )
+                raise ApiError("Method not allowed", HTTPStatus.METHOD_NOT_ALLOWED)
+            if path.startswith("/api/statements/clues/"):
+                try:
+                    clue_id = int(path.rsplit("/", 1)[1])
+                except ValueError:
+                    raise ApiError("Invalid clue id") from None
+                if method == "DELETE":
+                    if not database.delete_statement_clue(clue_id):
+                        raise ApiError("No clue with id %d" % clue_id, HTTPStatus.NOT_FOUND)
+                    return self._send_json({"deleted": clue_id, "clues": database.list_statement_clues()})
+                raise ApiError("Method not allowed", HTTPStatus.METHOD_NOT_ALLOWED)
+
             raise ApiError("Not found", HTTPStatus.NOT_FOUND)
+
+        def _statements_preview(self):
+            content_type = self.headers.get("Content-Type") or ""
+            month = "last"
+            all_dates = False
+            files = []
+            if "multipart/form-data" in content_type:
+                fields, uploads = self._read_multipart()
+                month = (fields.get("month") or "last").strip() or "last"
+                all_dates = str(fields.get("all_dates") or "").strip().lower() in {"1", "true", "yes"}
+                for upload in uploads:
+                    filename = upload["filename"] or "statement"
+                    files.append((filename, upload["data"]))
+            else:
+                payload = self._read_json()
+                month = str(payload.get("month") or "last")
+                all_dates = bool(payload.get("all_dates"))
+                for raw in payload.get("files") or []:
+                    if not isinstance(raw, dict):
+                        continue
+                    name = raw.get("filename") or raw.get("name") or "statement"
+                    text = raw.get("text")
+                    data = raw.get("data")
+                    if text is not None:
+                        files.append((name, str(text).encode("utf-8")))
+                    elif data:
+                        import base64
+
+                        files.append((name, base64.b64decode(data)))
+            if not files:
+                raise ApiError("Drop one or more bank statement files")
+            preview = preview_files(database, files, month=month, all_dates=all_dates)
+            payload = preview.to_dict(database.currency_symbol)
+            payload["categories"] = database.categories()
+            payload["clues"] = database.list_statement_clues()
+            return self._send_json(payload)
 
         def _food_order_api(self, method: str, path: str, symbol: str) -> None:
             parts = [part for part in path.split("/") if part]
@@ -391,6 +483,57 @@ def build_handler(database: Database):
             )
 
     return Handler
+
+
+def _parse_multipart(body: bytes, content_type: str):
+    match = re.search(r"boundary=([^;]+)", content_type, re.I)
+    if not match:
+        raise ApiError("Missing multipart boundary")
+    boundary = match.group(1).strip().strip('"').encode("ascii", errors="ignore")
+    if not boundary:
+        raise ApiError("Missing multipart boundary")
+    fields: Dict[str, str] = {}
+    files: List[Dict[str, Any]] = []
+    for part in body.split(b"--" + boundary):
+        chunk = part.lstrip(b"\r\n")
+        if not chunk or chunk.startswith(b"--"):
+            continue
+        header_blob, sep, data = chunk.partition(b"\r\n\r\n")
+        if not sep:
+            continue
+        if data.endswith(b"\r\n"):
+            data = data[:-2]
+        headers = {}
+        for line in header_blob.split(b"\r\n"):
+            if b":" not in line:
+                continue
+            key, value = line.split(b":", 1)
+            headers[key.decode("latin-1").lower()] = value.decode("latin-1").strip()
+        disposition = headers.get("content-disposition", "")
+        name = _disposition_param(disposition, "name")
+        filename = _disposition_param(disposition, "filename")
+        if filename:
+            files.append(
+                {
+                    "name": name,
+                    "filename": filename,
+                    "content_type": headers.get("content-type", "application/octet-stream"),
+                    "data": data,
+                }
+            )
+        elif name:
+            fields[name] = data.decode("utf-8", errors="replace")
+    return fields, files
+
+
+def _disposition_param(header: str, key: str) -> str:
+    match = re.search(r'(?:^|;)\s*%s="([^"]*)"' % re.escape(key), header, re.I)
+    if match:
+        return unquote(match.group(1))
+    match = re.search(r"(?:^|;)\s*%s=([^;]+)" % re.escape(key), header, re.I)
+    if match:
+        return unquote(match.group(1).strip().strip('"'))
+    return ""
 
 
 def _first(query: Dict[str, list], key: str) -> Optional[str]:

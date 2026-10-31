@@ -24,8 +24,9 @@ from .parsing import (
 )
 from .food_orders import FoodOrderMixin
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 INCOME_CATEGORY = "Income"
+CLUES_SEED_KEY = "seeded_statement_clues_1"
 
 DEFAULT_CATEGORIES = (
     "Car expense",
@@ -288,6 +289,28 @@ class Database(FoodOrderMixin):
                     monthly_limit_cents INTEGER NOT NULL,
                     updated_at          TEXT NOT NULL
                 );
+
+                CREATE TABLE IF NOT EXISTS statement_clues (
+                    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pattern    TEXT    NOT NULL COLLATE NOCASE,
+                    category   TEXT    NOT NULL DEFAULT '',
+                    skip       INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT    NOT NULL
+                );
+
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_statement_clues_pattern
+                    ON statement_clues (pattern);
+
+                CREATE TABLE IF NOT EXISTS imported_statements (
+                    fingerprint  TEXT    PRIMARY KEY,
+                    source       TEXT    NOT NULL DEFAULT '',
+                    spent_on     TEXT    NOT NULL,
+                    description  TEXT    NOT NULL,
+                    amount_cents INTEGER NOT NULL,
+                    category     TEXT    NOT NULL,
+                    expense_id   INTEGER,
+                    imported_at  TEXT    NOT NULL
+                );
                 """
             )
             self._migrate(connection)
@@ -338,7 +361,34 @@ class Database(FoodOrderMixin):
         )
         self._retire_unused_default_categories(connection)
         self._seed_category_limits(connection, stamp)
+        self._ensure_statement_schema(connection)
+        self._seed_statement_clues(connection, stamp)
         self.ensure_order_schema(connection)
+
+    def _ensure_statement_schema(self, connection: sqlite3.Connection) -> None:
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS statement_clues (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                pattern    TEXT    NOT NULL COLLATE NOCASE,
+                category   TEXT    NOT NULL DEFAULT '',
+                skip       INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT    NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_statement_clues_pattern
+                ON statement_clues (pattern);
+            CREATE TABLE IF NOT EXISTS imported_statements (
+                fingerprint  TEXT    PRIMARY KEY,
+                source       TEXT    NOT NULL DEFAULT '',
+                spent_on     TEXT    NOT NULL,
+                description  TEXT    NOT NULL,
+                amount_cents INTEGER NOT NULL,
+                category     TEXT    NOT NULL,
+                expense_id   INTEGER,
+                imported_at  TEXT    NOT NULL
+            );
+            """
+        )
 
     def _seed_category_limits(self, connection, stamp: str) -> None:
         already = connection.execute(
@@ -967,6 +1017,157 @@ class Database(FoodOrderMixin):
                 raise StorageError("Line %d: %s" % (line_number, error)) from None
             imported += 1
         return imported
+
+    # -------------------------------------------------------- statements
+
+    def _seed_statement_clues(self, connection, stamp: str) -> None:
+        already = connection.execute(
+            "SELECT value FROM meta WHERE key = ?", (CLUES_SEED_KEY,)
+        ).fetchone()
+        if already:
+            return
+        from .statements import load_default_clues
+
+        for pattern, category, skip in load_default_clues():
+            connection.execute(
+                "INSERT OR IGNORE INTO statement_clues (pattern, category, skip, created_at) "
+                "VALUES (?, ?, ?, ?)",
+                (pattern, category, 1 if skip else 0, stamp),
+            )
+        connection.execute(
+            "INSERT INTO meta (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (CLUES_SEED_KEY, stamp),
+        )
+
+    def list_statement_clues(self) -> List[Dict[str, object]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT id, pattern, category, skip, created_at "
+                "FROM statement_clues ORDER BY pattern COLLATE NOCASE"
+            ).fetchall()
+        return [
+            {
+                "id": int(row["id"]),
+                "pattern": row["pattern"],
+                "category": row["category"] or "",
+                "skip": bool(row["skip"]),
+                "created_at": row["created_at"],
+            }
+            for row in rows
+        ]
+
+    def upsert_statement_clue(self, pattern: str, category: str = "", skip: bool = False) -> Dict[str, object]:
+        clean = (pattern or "").strip()
+        if len(clean) < 2:
+            raise ParseError("A clue needs at least two characters of merchant text")
+        target = "" if skip else (category or "").strip()
+        if not skip and not target:
+            raise ParseError("Say which category this clue should use, or mark it skip")
+        stamp = _timestamp()
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT INTO statement_clues (pattern, category, skip, created_at) "
+                "VALUES (?, ?, ?, ?) "
+                "ON CONFLICT(pattern) DO UPDATE SET "
+                "category = excluded.category, skip = excluded.skip",
+                (clean, target, 1 if skip else 0, stamp),
+            )
+            row = connection.execute(
+                "SELECT id, pattern, category, skip, created_at "
+                "FROM statement_clues WHERE pattern = ? COLLATE NOCASE",
+                (clean,),
+            ).fetchone()
+        return {
+            "id": int(row["id"]),
+            "pattern": row["pattern"],
+            "category": row["category"] or "",
+            "skip": bool(row["skip"]),
+            "created_at": row["created_at"],
+        }
+
+    def delete_statement_clue(self, clue_id: int) -> bool:
+        with self._connect() as connection:
+            cursor = connection.execute(
+                "DELETE FROM statement_clues WHERE id = ?", (int(clue_id),)
+            )
+        return cursor.rowcount > 0
+
+    def import_statement_clues(self, handle) -> int:
+        reader = csv.DictReader(handle)
+        if reader.fieldnames is None:
+            raise StorageError("The clues file needs a header row: pattern,category")
+        updated = 0
+        for raw in reader:
+            pattern = (raw.get("pattern") or raw.get("clue") or "").strip()
+            category = (raw.get("category") or raw.get("name") or "").strip()
+            skip_flag = str(raw.get("skip") or "").strip().lower() in {"1", "true", "yes"}
+            if not pattern:
+                continue
+            skip = skip_flag or category.upper() == "SKIP"
+            self.upsert_statement_clue(pattern, "" if skip else category, skip=skip)
+            updated += 1
+        return updated
+
+    def export_statement_clues(self, handle) -> None:
+        writer = csv.writer(handle)
+        writer.writerow(["pattern", "category"])
+        for clue in sorted(self.list_statement_clues(), key=lambda row: row["pattern"].lower()):
+            writer.writerow([clue["pattern"], "SKIP" if clue["skip"] else clue["category"]])
+
+    def find_imported_fingerprints(self, fingerprints: Sequence[str]) -> Dict[str, Dict[str, object]]:
+        marks = [mark for mark in fingerprints if mark]
+        if not marks:
+            return {}
+        found: Dict[str, Dict[str, object]] = {}
+        chunk = 200
+        with self._connect() as connection:
+            for index in range(0, len(marks), chunk):
+                piece = marks[index : index + chunk]
+                placeholders = ",".join("?" for _ in piece)
+                rows = connection.execute(
+                    "SELECT fingerprint, category, expense_id, source, imported_at "
+                    "FROM imported_statements WHERE fingerprint IN (%s)" % placeholders,
+                    piece,
+                ).fetchall()
+                for row in rows:
+                    found[row["fingerprint"]] = {
+                        "category": row["category"],
+                        "expense_id": row["expense_id"],
+                        "source": row["source"],
+                        "imported_at": row["imported_at"],
+                    }
+        return found
+
+    def record_statement_import(
+        self,
+        fingerprint: str,
+        source: str,
+        spent_on: str,
+        description: str,
+        amount_cents: int,
+        category: str,
+        expense_id: Optional[int],
+    ) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT INTO imported_statements "
+                "(fingerprint, source, spent_on, description, amount_cents, category, expense_id, imported_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(fingerprint) DO UPDATE SET "
+                "source = excluded.source, category = excluded.category, "
+                "expense_id = excluded.expense_id, imported_at = excluded.imported_at",
+                (
+                    fingerprint,
+                    source or "",
+                    spent_on,
+                    description or "",
+                    int(amount_cents),
+                    category,
+                    expense_id,
+                    _timestamp(),
+                ),
+            )
 
 
 def _limits_csv_path() -> Optional[Path]:

@@ -23,6 +23,7 @@ from .parsing import (
     today,
 )
 from .reports import render_expenses, render_orders, render_summary, render_table
+from .statements import commit_proposals, preview_files, suggest_pattern
 from .storage import BUDGET_START, Database, StorageError
 
 PROGRAM = "expenses"
@@ -41,6 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  expenses orders                      list food orders and profit\n"
             "  expenses list --days 7               the last seven days of expenses\n"
             "  expenses web                         open the browser interface\n"
+            "  expenses statements *.pdf            file last month's bank PDFs\n"
         ),
     )
     parser.add_argument("--version", action="version", version="%s %s" % (PROGRAM, __version__))
@@ -186,6 +188,53 @@ def build_parser() -> argparse.ArgumentParser:
     importer = add_command("import", help="load expenses from a CSV file")
     importer.add_argument("path", help="CSV with date,item,category,amount,order,note columns")
     importer.set_defaults(handler=command_import)
+
+    statements = add_command(
+        "statements",
+        aliases=["statement"],
+        help="read bank PDF/CSV statements and file them by category",
+    )
+    statements.add_argument(
+        "paths",
+        nargs="*",
+        help="statement files (PDF, CSV, OFX, QIF). Multiple accounts are fine.",
+    )
+    statements.add_argument(
+        "-m",
+        "--month",
+        default="last",
+        help="month to keep (default: last, for the 5th-of-the-month drop-off)",
+    )
+    statements.add_argument(
+        "--all-dates",
+        action="store_true",
+        help="do not filter to one month",
+    )
+    statements.add_argument(
+        "--apply",
+        action="store_true",
+        help="import every ready row without asking",
+    )
+    statements.add_argument("--dry-run", action="store_true", help="show the grouping only")
+    statements.add_argument("--clues", action="store_true", help="list merchant clues and exit")
+    statements.add_argument(
+        "--remember",
+        nargs=2,
+        metavar=("TEXT", "CATEGORY"),
+        help="add a clue, e.g. --remember woolworths Veggies",
+    )
+    statements.add_argument(
+        "--skip-clue",
+        metavar="TEXT",
+        help="treat matching description text as a skip (transfers, card payments)",
+    )
+    statements.add_argument("--forget", type=int, metavar="ID", help="delete clue by id")
+    statements.add_argument(
+        "--import-clues",
+        metavar="PATH",
+        help="load clues from a CSV with pattern,category columns",
+    )
+    statements.set_defaults(handler=command_statements)
 
     prune = add_command(
         "prune", help="archive expenses that have aged out of the retention window"
@@ -676,6 +725,181 @@ def command_import(args, database: Database) -> int:
         imported = database.import_csv(handle)
     print("Imported %d expense(s) from %s" % (imported, path))
     return 0
+
+
+def command_statements(args, database: Database) -> int:
+    if args.import_clues:
+        path = Path(args.import_clues).expanduser()
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            updated = database.import_statement_clues(handle)
+        print("Loaded %d merchant clue(s) from %s" % (updated, path))
+        return 0
+    if args.remember:
+        clue = database.upsert_statement_clue(args.remember[0], args.remember[1])
+        print("Remembered %r → %s" % (clue["pattern"], clue["category"]))
+        return 0
+    if args.skip_clue:
+        clue = database.upsert_statement_clue(args.skip_clue, skip=True)
+        print("Will skip descriptions containing %r" % clue["pattern"])
+        return 0
+    if args.forget:
+        if database.delete_statement_clue(args.forget):
+            print("Forgot clue #%d" % args.forget)
+            return 0
+        raise StorageError("No clue with id %d" % args.forget)
+    if args.clues or not args.paths:
+        clues = database.list_statement_clues()
+        if not clues:
+            print("No merchant clues yet. Add some with --remember TEXT CATEGORY.")
+            return 0
+        rows = [
+            [
+                str(clue["id"]),
+                clue["pattern"],
+                "skip" if clue["skip"] else clue["category"],
+            ]
+            for clue in clues
+        ]
+        print(render_table(["ID", "CLUE", "CATEGORY"], rows, ["right", "left", "left"]))
+        if not args.paths:
+            print()
+            print("Drop last month's PDFs with: expenses statements --month last file1.pdf file2.pdf")
+        return 0
+
+    files = []
+    for raw in args.paths:
+        path = Path(raw).expanduser()
+        if not path.exists():
+            raise StorageError("No such file: %s" % path)
+        files.append((path.name, path.read_bytes()))
+
+    preview = preview_files(
+        database, files, month=args.month, all_dates=args.all_dates
+    )
+    symbol = database.currency_symbol
+    print(
+        "Read %d file(s) for %s."
+        % (len(preview.files), preview.to_dict(symbol)["month"]["label"])
+    )
+    for error in preview.errors:
+        print("  ! %s" % error)
+    counts = preview.to_dict(symbol)["counts"]
+    print(
+        "  %d ready  ·  %d need a category  ·  %d skipped  ·  %d already imported"
+        % (counts["ready"], counts["review"], counts["skip"], counts["duplicate"])
+    )
+    print()
+
+    ready = [line for line in preview.lines if line.status == "ready"]
+    review = [line for line in preview.lines if line.status == "review"]
+    if ready:
+        print(
+            render_table(
+                ["DATE", "ITEM", "CATEGORY", "AMOUNT"],
+                [
+                    [line.date, line.item[:42], line.category, line.amount_display]
+                    for line in ready
+                ],
+                ["left", "left", "left", "right"],
+            )
+        )
+        print()
+
+    if args.dry_run:
+        if review:
+            print("Needs a category:")
+            print(
+                render_table(
+                    ["DATE", "ITEM", "AMOUNT", "WHY"],
+                    [
+                        [line.date, line.item[:36], line.amount_display, line.reason]
+                        for line in review
+                    ],
+                    ["left", "left", "right", "left"],
+                )
+            )
+        return 0
+
+    decisions = []
+    if ready:
+        if args.apply:
+            take_ready = True
+        else:
+            answer = input("Import %d ready entr%s? [Y/n] " % (
+                len(ready),
+                "y" if len(ready) == 1 else "ies",
+            )).strip().lower()
+            take_ready = answer in {"", "y", "yes"}
+        if take_ready:
+            for line in ready:
+                decisions.append(_decision_from_line(line, "import"))
+
+    if review:
+        print()
+        print("These need you — type a category, skip, or list.")
+        categories = database.categories()
+        for line in review:
+            print(
+                "  %s  %s  %s"
+                % (line.date, line.item, line.amount_display)
+            )
+            print("    %s" % line.reason)
+            while True:
+                try:
+                    typed = input("    Category [skip]: ").strip()
+                except (EOFError, KeyboardInterrupt):
+                    print()
+                    typed = "skip"
+                if typed.lower() in {"", "skip", "s"}:
+                    decisions.append(_decision_from_line(line, "skip"))
+                    print("    Skipped.")
+                    break
+                if typed.lower() in {"list", "?"}:
+                    print("    %s" % ", ".join(categories))
+                    continue
+                category = _resolve_category(database, typed)
+                remember = line.remember or suggest_pattern(line.item)
+                keep = remember
+                if remember:
+                    try:
+                        answer = input(
+                            "    Remember %r → %s for next month? [Y/n] " % (remember, category)
+                        ).strip().lower()
+                    except (EOFError, KeyboardInterrupt):
+                        print()
+                        answer = "y"
+                    if answer in {"n", "no"}:
+                        keep = ""
+                payload = _decision_from_line(line, "import")
+                payload["category"] = category
+                payload["remember"] = keep
+                decisions.append(payload)
+                print("    → %s" % category)
+                break
+
+    if not decisions:
+        print("Nothing imported.")
+        return 0
+    result = commit_proposals(database, decisions)
+    print(
+        "Imported %d, skipped %d, remembered %d clue(s)."
+        % (result.imported, result.skipped, result.remembered)
+    )
+    return 0
+
+
+def _decision_from_line(line, action: str) -> dict:
+    return {
+        "action": action,
+        "fingerprint": line.fingerprint,
+        "date": line.date,
+        "item": line.item,
+        "amount_cents": line.amount_cents,
+        "category": line.category,
+        "source": line.source,
+        "remember": line.remember if action == "import" else "",
+        "note": "",
+    }
 
 
 def command_prune(args, database: Database) -> int:

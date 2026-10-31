@@ -18,6 +18,7 @@
   <nav class="nav">
     <a class="nav-link" id="nav-expenses" href="/">Expenses</a>
     <a class="nav-link" id="nav-orders" href="/orders">Food orders</a>
+    <a class="nav-link" id="nav-statements" href="/statements">Statements</a>
   </nav>
   <div class="topbar-actions">
     <a class="button ghost" id="export-link" href="/export.csv">Export CSV</a>
@@ -63,7 +64,7 @@
       <div class="form-actions">
         <button type="submit" class="button primary" id="submit-button">Add expense</button>
         <button type="button" class="button ghost hidden" id="cancel-edit">Cancel</button>
-        <span class="hint">Use <a href="/orders">Food orders</a> to track income, costs and profit per order.</span>
+        <span class="hint">Use <a href="/orders">Food orders</a> for P&amp;L, or <a href="/statements">Statements</a> to file last month's bank PDFs.</span>
       </div>
     </form>
 
@@ -256,6 +257,57 @@
     <div id="order-income-table"></div>
     <h3 class="section-title">Costs</h3>
     <div id="order-cost-table"></div>
+  </section>
+</main>
+
+<main id="view-statements" class="hidden">
+  <section class="panel wide">
+    <div class="panel-head">
+      <h2>Bank statements</h2>
+      <span class="pill" id="statements-pill">Last month</span>
+    </div>
+    <p class="muted">On the 5th, drop in every account's previous-month PDF (CSV, OFX and QIF work too). Known merchants are filed from your clues. Anything unclear waits here so you can pick the category &mdash; that choice can be remembered for next month.</p>
+
+    <form id="statement-upload" class="statement-upload" autocomplete="off">
+      <label class="field date-field">
+        <span>Month</span>
+        <input type="month" id="statement-month" required>
+      </label>
+      <label class="dropzone" id="statement-drop">
+        <input type="file" id="statement-files" multiple accept=".pdf,.csv,.ofx,.qfx,.qif,.txt,application/pdf,text/csv">
+        <strong>Drop statements here</strong>
+        <span>or click to choose several files</span>
+        <em id="statement-file-names">No files chosen</em>
+      </label>
+      <button type="submit" class="button primary" id="statement-read">Read statements</button>
+    </form>
+    <p class="muted" id="statement-errors"></p>
+
+    <div id="statement-summary" class="stat-grid hidden"></div>
+    <div id="statement-review"></div>
+    <div class="form-actions hidden" id="statement-actions">
+      <button type="button" class="button primary" id="statement-commit">Add the decided rows</button>
+      <span class="hint" id="statement-commit-hint"></span>
+    </div>
+  </section>
+
+  <section class="panel wide">
+    <div class="panel-head">
+      <h2>Merchant clues</h2>
+    </div>
+    <p class="muted">Longest matching text wins. Use SKIP for transfers, card payments and opening/closing balances.</p>
+    <form id="clue-form" class="create-order" autocomplete="off">
+      <label class="field grow">
+        <span>If the description contains</span>
+        <input type="text" id="clue-pattern" placeholder="e.g. woolworths" required maxlength="80">
+      </label>
+      <label class="field grow">
+        <span>File it as</span>
+        <select id="clue-category"></select>
+      </label>
+      <button type="submit" class="button ghost">Remember clue</button>
+    </form>
+    <div id="clues-list"></div>
   </section>
 </main>
 

@@ -11,7 +11,13 @@ const state = {
 const $ = (id) => document.getElementById(id);
 const path = (location.pathname.replace(/\/+$/, "") || "/");
 const orderMatch = path.match(/^\/orders\/(\d+)$/);
-const page = orderMatch ? "order" : path === "/orders" ? "orders" : "expenses";
+const page = orderMatch
+  ? "order"
+  : path === "/orders"
+    ? "orders"
+    : path === "/statements"
+      ? "statements"
+      : "expenses";
 
 const form = $("entry-form");
 const fieldDate = $("field-date");
@@ -148,8 +154,10 @@ function showPage() {
   $("view-expenses").classList.toggle("hidden", page !== "expenses");
   $("view-orders").classList.toggle("hidden", page !== "orders");
   $("view-order").classList.toggle("hidden", page !== "order");
+  $("view-statements").classList.toggle("hidden", page !== "statements");
   $("nav-expenses").classList.toggle("active", page === "expenses");
   $("nav-orders").classList.toggle("active", page === "orders" || page === "order");
+  $("nav-statements").classList.toggle("active", page === "statements");
   $("export-link").classList.toggle("hidden", page !== "expenses");
 }
 
@@ -687,6 +695,281 @@ function wireOrderPages() {
   });
 }
 
+// ------------------------------------------------------------ statements
+
+const statementState = { lines: [], categories: [] };
+
+function lastMonthValue() {
+  const now = new Date();
+  const date = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${date.getFullYear()}-${month}`;
+}
+
+function fillStatementCategories(selected) {
+  const clueSelect = $("clue-category");
+  const names = ["SKIP", ...statementState.categories];
+  clueSelect.replaceChildren(...names.map((name) => el("option", { value: name, text: name })));
+  if (selected && names.includes(selected)) clueSelect.value = selected;
+}
+
+function reviewSelect(line) {
+  const names = ["", "SKIP", ...statementState.categories];
+  const select = el(
+    "select",
+    { class: "review-category", "data-fp": line.fingerprint },
+    names.map((name) =>
+      el("option", {
+        value: name,
+        text: name === "" ? "Pick a category" : name === "SKIP" ? "Skip" : name,
+      })
+    )
+  );
+  if (line.category === "SKIP") select.value = "SKIP";
+  else if (line.category && statementState.categories.includes(line.category)) select.value = line.category;
+  return select;
+}
+
+function renderClues(clues) {
+  if (!clues.length) {
+    $("clues-list").replaceChildren(empty("No clues yet. Add merchant text above as you learn your statements."));
+    return;
+  }
+  $("clues-list").replaceChildren(
+    lineTable(
+      clues,
+      [
+        { label: "Contains", value: (row) => row.pattern },
+        { label: "Category", value: (row) => (row.skip ? "SKIP" : row.category) },
+      ],
+      {
+        onDelete: async (row) => {
+          if (!confirm(`Forget clue "${row.pattern}"?`)) return;
+          const result = await api(`/api/statements/clues/${row.id}`, { method: "DELETE" });
+          renderClues(result.clues || []);
+          toast("Clue forgotten");
+        },
+      }
+    )
+  );
+}
+
+function renderStatementPreview(data) {
+  statementState.lines = data.lines || [];
+  statementState.categories = data.categories || statementState.categories;
+  fillStatementCategories();
+  const counts = data.counts || {};
+  $("statements-pill").textContent = data.month && data.month.label ? data.month.label : "Statements";
+  $("statement-errors").textContent = (data.errors || []).join(" · ");
+  $("statement-summary").classList.remove("hidden");
+  $("statement-summary").replaceChildren(
+    ...[
+      ["Ready", counts.ready || 0],
+      ["Need you", counts.review || 0],
+      ["Skipped", counts.skip || 0],
+      ["Already in", counts.duplicate || 0],
+    ].map(([label, value]) =>
+      el("div", { class: "stat-card" }, [
+        el("span", { class: "label", text: label }),
+        el("span", { class: "value", text: String(value) }),
+      ])
+    )
+  );
+  if (!statementState.lines.length) {
+    $("statement-review").replaceChildren(empty("No transactions in that month."));
+    $("statement-actions").classList.add("hidden");
+    return;
+  }
+  const table = el("table", {}, [
+    el("thead", {}, [
+      el("tr", {}, [
+        el("th", { text: "Date" }),
+        el("th", { text: "Item" }),
+        el("th", { text: "File" }),
+        el("th", { class: "amount", text: "Amount" }),
+        el("th", { text: "Category" }),
+        el("th", { text: "Remember" }),
+      ]),
+    ]),
+    el(
+      "tbody",
+      {},
+      statementState.lines.map((line) => {
+        const locked = line.status === "duplicate";
+        const skipLocked = line.status === "skip";
+        const categoryCell = locked || skipLocked
+          ? el("td", { text: line.status === "skip" ? "skip" : line.category || "already in" })
+          : el("td", {}, [reviewSelect(line)]);
+        const remember = el("input", {
+          type: "text",
+          value: line.remember || "",
+          placeholder: "merchant text",
+          maxlength: "80",
+          "data-remember": line.fingerprint,
+        });
+        if (locked) remember.disabled = true;
+        return el("tr", { class: `review-row ${line.status === "review" ? "needs" : line.status}` }, [
+          el("td", { class: "date", text: line.date }),
+          el("td", {}, [
+            el("span", { text: line.item }),
+            el("span", { class: "review-note", text: line.reason }),
+          ]),
+          el("td", { class: "date", text: line.source }),
+          el("td", { class: "amount", text: line.amount_display }),
+          categoryCell,
+          el("td", {}, [remember]),
+        ]);
+      })
+    ),
+  ]);
+  $("statement-review").replaceChildren(table);
+  $("statement-actions").classList.remove("hidden");
+  $("statement-commit-hint").textContent =
+    "Ready rows import as-is. Highlighted rows wait until you pick a category. Leave them blank to ask again next time.";
+}
+
+function collectStatementDecisions() {
+  const items = [];
+  for (const line of statementState.lines) {
+    if (line.status === "duplicate") continue;
+    const select = document.querySelector(`select.review-category[data-fp="${line.fingerprint}"]`);
+    const rememberInput = document.querySelector(`input[data-remember="${line.fingerprint}"]`);
+    const remember = rememberInput ? rememberInput.value.trim() : "";
+    let category = line.category;
+    if (select) category = select.value;
+    const skip = line.status === "skip" || category === "SKIP" || category === "skip";
+    if (skip) {
+      items.push({
+        action: "skip",
+        fingerprint: line.fingerprint,
+        date: line.date,
+        item: line.item,
+        amount_cents: line.amount_cents,
+        category: "SKIP",
+        source: line.source,
+        remember,
+      });
+      continue;
+    }
+    if (!category) continue;
+    items.push({
+      action: "import",
+      fingerprint: line.fingerprint,
+      date: line.date,
+      item: line.item,
+      amount_cents: line.amount_cents,
+      category,
+      source: line.source,
+      remember,
+    });
+  }
+  return items;
+}
+
+async function loadClues() {
+  const data = await api("/api/statements/clues");
+  const categories = await api("/api/categories");
+  statementState.categories = categories.categories || [];
+  fillStatementCategories();
+  renderClues(data.clues || []);
+}
+
+function wireStatementsPage() {
+  $("statement-month").value = lastMonthValue();
+  const drop = $("statement-drop");
+  const filesInput = $("statement-files");
+  const names = $("statement-file-names");
+  const refreshNames = () => {
+    const files = [...filesInput.files];
+    names.textContent = files.length ? files.map((file) => file.name).join(", ") : "No files chosen";
+  };
+  filesInput.addEventListener("change", refreshNames);
+  ["dragenter", "dragover"].forEach((eventName) =>
+    drop.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      drop.classList.add("drag");
+    })
+  );
+  ["dragleave", "drop"].forEach((eventName) =>
+    drop.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      drop.classList.remove("drag");
+    })
+  );
+  drop.addEventListener("drop", (event) => {
+    if (event.dataTransfer && event.dataTransfer.files.length) {
+      filesInput.files = event.dataTransfer.files;
+      refreshNames();
+    }
+  });
+  $("statement-upload").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const files = [...filesInput.files];
+    if (!files.length) {
+      toast("Choose one or more statement files", true);
+      return;
+    }
+    const body = new FormData();
+    body.append("month", $("statement-month").value);
+    files.forEach((file) => body.append("files", file));
+    try {
+      const response = await fetch("/api/statements/preview", {
+        method: "POST",
+        headers: { "X-Expense-Tracker": "1" },
+        body,
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not read statements");
+      if (payload.categories) statementState.categories = payload.categories;
+      if (payload.clues) renderClues(payload.clues);
+      renderStatementPreview(payload);
+      toast(`Read ${files.length} file${files.length === 1 ? "" : "s"}`);
+    } catch (error) {
+      toast(error.message, true);
+    }
+  });
+  $("statement-commit").addEventListener("click", async () => {
+    const items = collectStatementDecisions();
+    if (!items.length) {
+      toast("Nothing to add — pick categories on the highlighted rows", true);
+      return;
+    }
+    try {
+      const result = await api("/api/statements/commit", {
+        method: "POST",
+        body: JSON.stringify({ items }),
+      });
+      toast(`Imported ${result.imported}, skipped ${result.skipped}, remembered ${result.remembered} clue(s)`);
+      statementState.lines = [];
+      $("statement-review").replaceChildren(empty("Imported. Drop next month's statements when they arrive."));
+      $("statement-actions").classList.add("hidden");
+      $("statement-summary").classList.add("hidden");
+      await loadClues();
+    } catch (error) {
+      toast(error.message, true);
+    }
+  });
+  $("clue-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      const category = $("clue-category").value;
+      const result = await api("/api/statements/clues", {
+        method: "POST",
+        body: JSON.stringify({
+          pattern: $("clue-pattern").value.trim(),
+          category: category === "SKIP" ? "" : category,
+          skip: category === "SKIP",
+        }),
+      });
+      $("clue-pattern").value = "";
+      renderClues(result.clues || []);
+      toast(`Remembered "${result.clue.pattern}"`);
+    } catch (error) {
+      toast(error.message, true);
+    }
+  });
+}
+
 // ------------------------------------------------------------------ start
 
 showPage();
@@ -700,6 +983,10 @@ if (page === "expenses") {
   $("retention-note").textContent = "Income minus costs, with reserves for rates, ABN, registration and income tax";
   wireOrderPages();
   loadOrderList().catch((error) => toast(error.message, true));
+} else if (page === "statements") {
+  $("retention-note").textContent = "Drop last month's bank PDFs on the 5th · unclear merchants wait for you";
+  wireStatementsPage();
+  loadClues().catch((error) => toast(error.message, true));
 } else {
   $("retention-note").textContent = "Income, costs, labour hours, profit, rates reserve and income tax for this order";
   wireOrderPages();

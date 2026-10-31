@@ -142,6 +142,43 @@ can reach it, and it never sends your data anywhere.
 
 ---
 
+## Bank statements (the 5th-of-the-month drop-off)
+
+Each month, around the 5th, drop in every account's **previous-month**
+statement instead of typing the lines. PDF is the usual format; CSV, OFX and
+QIF work too.
+
+```bash
+expenses web
+# then open http://127.0.0.1:8765/statements
+```
+
+Or from the command line:
+
+```bash
+expenses statements --month last ~/Downloads/cba-sep.pdf ~/Downloads/anz-sep.pdf
+```
+
+Known merchants are filed from **clues** (longest matching text wins). A starter
+list lives in `statement-clues.csv` — Costco, Woolworths, fuel brands, insurers
+and so on. Anything the clues cannot place is left for you to assign. When you
+pick a category you can remember the merchant text so next month files itself.
+
+If a row is a transfer, card payment or opening/closing balance, mark it
+`SKIP`. Unsure rows are never guessed into Other.
+
+```bash
+expenses statements --clues
+expenses statements --remember woolworths Veggies
+expenses statements --skip-clue "transfer to savings"
+expenses statements --import-clues statement-clues.csv
+```
+
+Text-based bank PDFs are read directly. If a statement is a scan (image only),
+export a CSV from the bank, or install `pdftotext` from Poppler.
+
+---
+
 ## Categories
 
 Twelve sensible categories exist from the start: Groceries, Dining, Transport,
