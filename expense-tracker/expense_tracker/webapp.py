@@ -31,7 +31,7 @@ from .parsing import (
     resolve_range,
     today,
 )
-from .statements import commit_proposals, preview_files
+from .statements import commit_proposals, preview_files, remember_from_range
 from .storage import BUDGET_START, Database, StorageError
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -312,6 +312,7 @@ def build_handler(database: Database):
                 start, end = resolve_range(month=month)
                 if not start or not end:
                     raise ApiError("Say which month to erase, for example 2026-10")
+                learned = remember_from_range(database, start, end)
                 wiped = database.erase_month(start, end)
                 return self._send_json(
                     {
@@ -322,6 +323,7 @@ def build_handler(database: Database):
                         },
                         "erased": wiped["expenses"],
                         "cleared_imports": wiped["imports"],
+                        "remembered": learned,
                     }
                 )
             if path == "/api/statements/commit" and method == "POST":
@@ -336,6 +338,7 @@ def build_handler(database: Database):
                     start, end = resolve_range(month=month)
                     if not start or not end:
                         raise ApiError("Say which month to replace, for example 2026-10")
+                    remember_from_range(database, start, end)
                     wiped = database.erase_month(start, end)
                 else:
                     wiped = {"expenses": 0, "imports": 0}

@@ -23,7 +23,7 @@ from .parsing import (
     today,
 )
 from .reports import render_expenses, render_orders, render_summary, render_table
-from .statements import commit_proposals, preview_files, suggest_pattern
+from .statements import commit_proposals, preview_files, remember_from_range, suggest_pattern
 from .storage import BUDGET_START, Database, StorageError
 
 PROGRAM = "expenses"
@@ -785,7 +785,12 @@ def command_statements(args, database: Database) -> int:
         start, end = resolve_range(month=statement_month)
         if not start or not end:
             raise StorageError("Say which month to erase, for example --month 2026-10")
+        learned = remember_from_range(database, start, end)
         wiped = database.erase_month(start, end)
+        if learned:
+            print("Remembered %d categor%s from the existing month." % (
+                learned, "y" if learned == 1 else "ies"
+            ))
         print(
             "Erased %d personal expense(s) and %d statement fingerprint(s) for %s to %s. Food orders were left alone."
             % (wiped["expenses"], wiped["imports"], format_date(start), format_date(end))
@@ -950,7 +955,7 @@ def _decision_from_line(line, action: str) -> dict:
         "amount_cents": line.amount_cents,
         "category": line.category,
         "source": line.source,
-        "remember": line.remember if action == "import" else "",
+        "remember": line.remember or (suggest_pattern(line.item) if action == "import" else ""),
         "note": "",
     }
 

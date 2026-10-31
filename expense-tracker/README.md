@@ -171,8 +171,10 @@ list lives in `statement-clues.csv` — Costco, Woolworths, fuel brands, insurer
 and so on. Anything the clues cannot place is left for you to assign. When you
 pick a category you can remember the merchant text so next month files itself.
 
-If a row is a transfer, card payment or opening/closing balance, mark it
-`SKIP`. Unsure rows are never guessed into Other.
+Transfers between your own accounts are skipped automatically (including a
+debit on one statement that matches a credit on another). Card payments and
+opening/closing balances are `SKIP` too. Unsure rows are never guessed into
+Other.
 
 ```bash
 expenses statements --clues

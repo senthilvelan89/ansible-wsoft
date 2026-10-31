@@ -839,7 +839,7 @@ function renderStatementPreview(data) {
   $("statement-review").replaceChildren(table);
   $("statement-actions").classList.remove("hidden");
   $("statement-commit-hint").textContent =
-    "Ready rows import as-is. Highlighted rows wait until you pick a category. Leave them blank to ask again next time.";
+    "The category you pick is remembered for next month. Highlighted rows wait until you choose one. Leave a row blank to ask again.";
 }
 
 function collectStatementDecisions(includeDuplicates = false) {
@@ -848,7 +848,7 @@ function collectStatementDecisions(includeDuplicates = false) {
     if (line.status === "duplicate" && !includeDuplicates) continue;
     const select = document.querySelector(`select.review-category[data-fp="${line.fingerprint}"]`);
     const rememberInput = document.querySelector(`input[data-remember="${line.fingerprint}"]`);
-    const remember = rememberInput ? rememberInput.value.trim() : "";
+    const remember = (rememberInput ? rememberInput.value.trim() : "") || line.remember || "";
     let category = line.category;
     if (select) category = select.value;
     const skip = line.status === "skip" || category === "SKIP" || category === "skip";

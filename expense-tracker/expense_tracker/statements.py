@@ -518,8 +518,10 @@ def commit_proposals(database: Database, items: Sequence[Dict[str, object]]) -> 
             continue
         remember = str(raw.get("remember") or "").strip()
         category = str(raw.get("category") or "").strip()
-        if remember:
-            skip = action == "skip" or category.upper() == SKIP_CATEGORY
+        skip = action == "skip" or category.upper() == SKIP_CATEGORY
+        if not remember and not skip:
+            remember = suggest_pattern(str(raw.get("item") or ""))
+        if remember and (not skip or raw.get("remember")):
             database.upsert_statement_clue(
                 remember, "" if skip else category or "Other", skip=skip
             )
@@ -567,6 +569,23 @@ def commit_proposals(database: Database, items: Sequence[Dict[str, object]]) -> 
         result.imported += 1
         result.expense_ids.append(expense.id)
     return result
+
+
+def remember_from_range(database: Database, start, end) -> int:
+    """Turn already-filed expenses into merchant clues before a re-import."""
+
+    remembered = 0
+    seen = set()
+    for expense in database.list_expenses(start=start, end=end, newest_first=False):
+        if (expense.category or "").upper() == SKIP_CATEGORY:
+            continue
+        pattern = suggest_pattern(expense.item)
+        if not pattern or pattern in seen:
+            continue
+        seen.add(pattern)
+        database.upsert_statement_clue(pattern, expense.category)
+        remembered += 1
+    return remembered
 
 
 def suggest_pattern(description: str) -> str:
