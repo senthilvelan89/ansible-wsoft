@@ -132,10 +132,9 @@ expenses web
 ```
 
 This starts a small server on your Mac and opens
-<http://127.0.0.1:8765>. You get a form for date, item, cost and category, the
-list of everything entered for the selected day, a category breakdown for the
-month and a bar chart of the last 12 months. Press `Ctrl+C` in Terminal to stop
-it.
+<http://127.0.0.1:8765>. Tabs cover **Expenses**, **Income**, **Food orders**
+and **Statements**. Income (salary and other money in) has its own page — it
+is not an expense category. Press `Ctrl+C` in Terminal to stop it.
 
 The server listens on the loopback interface only, so nothing outside your Mac
 can reach it, and it never sends your data anywhere.

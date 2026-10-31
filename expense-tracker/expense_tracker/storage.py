@@ -495,6 +495,9 @@ class Database(FoodOrderMixin):
             ).fetchall()
         return [row["name"] for row in rows]
 
+    def expense_categories(self) -> List[str]:
+        return [name for name in self.categories() if not is_income_category(name)]
+
     def add_category(self, name: str) -> str:
         clean = _clean_category(name)
         with self._connect() as connection:

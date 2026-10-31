@@ -57,7 +57,7 @@ h3 { font-size: 14px; }
 
 .brand { display: flex; align-items: center; gap: 12px; }
 
-.nav { display: flex; gap: 6px; }
+.nav { display: flex; gap: 6px; flex-wrap: wrap; }
 .nav-link {
   color: var(--text);
   text-decoration: none;

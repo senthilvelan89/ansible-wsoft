@@ -131,7 +131,7 @@ def build_handler(database: Database):
                     raise ApiError("Missing %s header" % GUARD_HEADER, HTTPStatus.FORBIDDEN)
 
                 if method == "GET" and (
-                    path in {"/", "/index.html", "/orders", "/statements"}
+                    path in {"/", "/index.html", "/orders", "/statements", "/income"}
                     or path.startswith("/orders/")
                 ):
                     return self._serve_page()
@@ -162,20 +162,29 @@ def build_handler(database: Database):
             if path == "/api/expenses":
                 if method == "GET":
                     start, end = _range_from_query(query)
+                    exclude_income = str(_first(query, "exclude_income") or "").lower() in {
+                        "1",
+                        "true",
+                        "yes",
+                    }
                     expenses = database.list_expenses(
                         start=start,
                         end=end,
                         category=_first(query, "category"),
                         search=_first(query, "search"),
                         order_name=_first(query, "order"),
+                        exclude_income=exclude_income,
                         limit=_int(query, "limit"),
                     )
                     spend = sum(e.amount_cents for e in expenses if not e.is_income)
+                    income = sum(e.amount_cents for e in expenses if e.is_income)
                     return self._send_json(
                         {
                             "expenses": [expense.to_dict(symbol) for expense in expenses],
                             "total_cents": spend,
                             "total_display": format_amount(spend, symbol),
+                            "income_cents": income,
+                            "income_display": format_amount(income, symbol),
                         }
                     )
                 if method == "POST":
@@ -644,6 +653,10 @@ def _state_payload(database: Database, query: Dict[str, list]) -> Dict[str, Any]
     day_income = database.totals(start=reference, end=reference, category="Income")
     month_spend = database.totals(start=month_start, end=month_end, exclude_income=True)
     month_income = database.totals(start=month_start, end=month_end, category="Income")
+    window_income = database.totals(start=window_start, end=today(), category="Income")
+    income_trend = database.summary(
+        "month", start=window_start, end=today(), category="Income"
+    )
     month_categories = database.summary(
         "category", start=month_start, end=month_end, exclude_income=True
     )
@@ -661,6 +674,7 @@ def _state_payload(database: Database, query: Dict[str, list]) -> Dict[str, Any]
         "today": format_date(today()),
         "date": format_date(reference),
         "categories": database.categories(),
+        "expense_categories": database.expense_categories(),
         "order_names": database.order_names(),
         "retention_months": database.retention_months,
         "retention_cutoff": format_date(database.retention_cutoff()),
@@ -672,6 +686,9 @@ def _state_payload(database: Database, query: Dict[str, list]) -> Dict[str, Any]
             "total_display": format_amount(day_spend.total_cents, symbol),
             "income_cents": day_income.total_cents,
             "income_display": format_amount(day_income.total_cents, symbol),
+            "income_entries": [
+                expense.to_dict(symbol) for expense in day_expenses if expense.is_income
+            ],
         },
         "month": {
             "start": format_date(month_start),
@@ -696,7 +713,10 @@ def _state_payload(database: Database, query: Dict[str, list]) -> Dict[str, Any]
             "end": format_date(today()),
             "total_cents": window_spend.total_cents,
             "total_display": format_amount(window_spend.total_cents, symbol),
+            "income_cents": window_income.total_cents,
+            "income_display": format_amount(window_income.total_cents, symbol),
             "months": [bucket.to_dict(symbol) for bucket in monthly_trend],
+            "income_months": [bucket.to_dict(symbol) for bucket in income_trend],
             "first_record": format_date(span[0]) if span else None,
             "last_record": format_date(span[1]) if span else None,
         },

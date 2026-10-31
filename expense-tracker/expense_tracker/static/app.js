@@ -3,6 +3,7 @@
 const state = {
   currency: "$",
   categories: [],
+  expenseCategories: [],
   orderCategories: [],
   today: new Date().toISOString().slice(0, 10),
   currentOrderId: null,
@@ -17,7 +18,9 @@ const page = orderMatch
     ? "orders"
     : path === "/statements"
       ? "statements"
-      : "expenses";
+      : path === "/income"
+        ? "income"
+        : "expenses";
 
 const form = $("entry-form");
 const fieldDate = $("field-date");
@@ -100,6 +103,13 @@ function isIncomeCategory(name) {
   return (name || "").trim().toLowerCase() === "income";
 }
 
+function expenseCategories() {
+  if (state.expenseCategories && state.expenseCategories.length) {
+    return state.expenseCategories;
+  }
+  return (state.categories || []).filter((name) => !isIncomeCategory(name));
+}
+
 function isLabourCategory(name) {
   return (name || "").trim().toLowerCase() === "labour";
 }
@@ -152,13 +162,15 @@ function syncAmountLabel() {
 
 function showPage() {
   $("view-expenses").classList.toggle("hidden", page !== "expenses");
+  $("view-income").classList.toggle("hidden", page !== "income");
   $("view-orders").classList.toggle("hidden", page !== "orders");
   $("view-order").classList.toggle("hidden", page !== "order");
   $("view-statements").classList.toggle("hidden", page !== "statements");
   $("nav-expenses").classList.toggle("active", page === "expenses");
+  $("nav-income").classList.toggle("active", page === "income");
   $("nav-orders").classList.toggle("active", page === "orders" || page === "order");
   $("nav-statements").classList.toggle("active", page === "statements");
-  $("export-link").classList.toggle("hidden", page !== "expenses");
+  $("export-link").classList.toggle("hidden", page !== "expenses" && page !== "income");
 }
 
 function empty(text) {
@@ -203,17 +215,18 @@ function lineTable(rows, columns, { onDelete } = {}) {
 // ------------------------------------------------------------- expenses
 
 function renderCategoryOptions() {
+  const names = expenseCategories();
   const current = fieldCategory.value;
-  fieldCategory.replaceChildren(...state.categories.map((name) => el("option", { value: name, text: name })));
-  if (state.categories.includes(current)) fieldCategory.value = current;
-  else if (state.categories.includes("Dining")) fieldCategory.value = "Dining";
+  fieldCategory.replaceChildren(...names.map((name) => el("option", { value: name, text: name })));
+  if (names.includes(current)) fieldCategory.value = current;
+  else if (names.includes("Dining")) fieldCategory.value = "Dining";
 
   const selectedFilter = filterCategory.value;
   filterCategory.replaceChildren(
     el("option", { value: "", text: "All categories" }),
-    ...state.categories.map((name) => el("option", { value: name, text: name }))
+    ...names.map((name) => el("option", { value: name, text: name }))
   );
-  if (state.categories.includes(selectedFilter)) filterCategory.value = selectedFilter;
+  if (names.includes(selectedFilter)) filterCategory.value = selectedFilter;
   syncAmountLabel();
 }
 
@@ -321,15 +334,19 @@ async function loadState() {
   const data = await api(`/api/state?date=${encodeURIComponent(fieldDate.value || state.today)}`);
   state.currency = data.currency;
   state.categories = data.categories;
+  state.expenseCategories = data.expense_categories || [];
   state.today = data.today;
   renderCategoryOptions();
   $("retention-note").textContent =
     `Keeping ${data.retention_months} months of history · entries before ${data.retention_cutoff} are archived to CSV`;
-  let dayLabel = `${data.day.total_display} spent on ${data.day.date}`;
-  if (data.day.income_cents) dayLabel += ` · ${data.day.income_display} in`;
-  $("day-total").textContent = dayLabel;
+  $("day-total").textContent = `${data.day.total_display} spent on ${data.day.date}`;
   $("day-label").textContent = data.day.date === data.today ? `today (${data.day.date})` : data.day.date;
-  $("day-entries").replaceChildren(expenseTable(data.day.expenses, { showDate: false }));
+  $("day-entries").replaceChildren(
+    expenseTable(
+      (data.day.expenses || []).filter((row) => !row.is_income),
+      { showDate: false }
+    )
+  );
   $("month-total").textContent = data.month.total_display + " spent";
   $("month-label").textContent = `${data.month.label} · ${data.month.start} to ${data.month.end}`;
   renderMonthBudgets(data.month);
@@ -350,6 +367,7 @@ function currentFilters() {
   } else params.set("days", range);
   if (filterCategory.value) params.set("category", filterCategory.value);
   if (filterSearch.value.trim()) params.set("search", filterSearch.value.trim());
+  params.set("exclude_income", "1");
   return params;
 }
 
@@ -695,6 +713,179 @@ function wireOrderPages() {
   });
 }
 
+// --------------------------------------------------------------- income
+
+function incomeTable(entries, { showDate }) {
+  if (!entries.length) return empty("Nothing recorded yet.");
+  const head = el("tr", {}, [
+    showDate ? el("th", { text: "Date" }) : null,
+    el("th", { text: "Source" }),
+    el("th", { class: "amount", text: "Amount" }),
+    el("th", { class: "actions", text: "" }),
+  ]);
+  const rows = entries.map((entry) =>
+    el("tr", {}, [
+      showDate ? el("td", { class: "date", text: entry.date }) : null,
+      el("td", {}, [
+        el("span", { text: entry.item }),
+        entry.note ? el("span", { class: "note", text: entry.note }) : null,
+      ]),
+      el("td", { class: "amount", text: entry.amount_display }),
+      el("td", { class: "actions" }, [
+        el("button", { class: "button link", text: "Edit", onclick: () => startIncomeEdit(entry) }),
+        el("button", {
+          class: "button link danger",
+          text: "Delete",
+          onclick: () => removeIncome(entry),
+        }),
+      ]),
+    ])
+  );
+  return el("table", {}, [el("thead", {}, [head]), el("tbody", {}, rows)]);
+}
+
+function incomeFilters() {
+  const params = new URLSearchParams();
+  const range = $("income-filter-range").value;
+  if (range === "month") params.set("month", "this");
+  else if (range === "last-month") params.set("month", "last");
+  else if (range === "custom") {
+    if ($("income-filter-from").value) params.set("from", $("income-filter-from").value);
+    if ($("income-filter-to").value) params.set("to", $("income-filter-to").value);
+  } else params.set("days", range);
+  if ($("income-filter-search").value.trim()) params.set("search", $("income-filter-search").value.trim());
+  params.set("category", "Income");
+  return params;
+}
+
+async function loadIncomeState() {
+  const date = $("income-field-date").value || state.today;
+  const data = await api(`/api/state?date=${encodeURIComponent(date)}`);
+  state.currency = data.currency;
+  state.today = data.today;
+  $("retention-note").textContent =
+    `Keeping ${data.retention_months} months of history · entries before ${data.retention_cutoff} are archived to CSV`;
+  $("income-day-total").textContent = `${data.day.income_display} received on ${data.day.date}`;
+  $("income-day-label").textContent = data.day.date === data.today ? `today (${data.day.date})` : data.day.date;
+  $("income-day-entries").replaceChildren(incomeTable(data.day.income_entries || [], { showDate: false }));
+  $("income-month-total").textContent = data.month.income_display + " received";
+  $("income-month-label").textContent = `${data.month.label} · ${data.month.start} to ${data.month.end}`;
+  $("income-window-total").textContent =
+    `${data.window.income_display} between ${data.window.start} and ${data.window.end}`;
+  renderTrendInto($("income-trend"), data.window.income_months || []);
+}
+
+function renderTrendInto(container, months) {
+  if (!container) return;
+  if (!months.length) {
+    container.replaceChildren(empty("No income yet."));
+    return;
+  }
+  const largest = Math.max(...months.map((bucket) => Math.abs(bucket.total_cents)), 1);
+  container.replaceChildren(
+    ...months.map((bucket) =>
+      el("div", { class: "trend-col", title: `${bucket.key}: ${bucket.total_display}` }, [
+        el("div", {
+          class: "trend-bar",
+          style: `height: ${Math.max((Math.abs(bucket.total_cents) / largest) * 100, 2)}%`,
+        }),
+        el("span", { class: "month", text: monthLabel(bucket.key) }),
+      ])
+    )
+  );
+}
+
+async function loadIncomeHistory() {
+  const params = incomeFilters();
+  $("export-link").href = `/export.csv?${params.toString()}`;
+  const listing = await api(`/api/expenses?${params.toString()}`);
+  $("income-history-total").textContent =
+    `${listing.income_display || listing.total_display} received · ${listing.expenses.length} entries`;
+  $("income-history-entries").replaceChildren(incomeTable(listing.expenses, { showDate: true }));
+}
+
+async function refreshIncome() {
+  await Promise.all([loadIncomeState(), loadIncomeHistory()]);
+}
+
+function startIncomeEdit(entry) {
+  $("income-edit-id").value = entry.id;
+  $("income-field-date").value = entry.date;
+  $("income-field-item").value = entry.item;
+  $("income-field-amount").value = (entry.amount_cents / 100).toFixed(2);
+  $("income-field-note").value = entry.note || "";
+  $("income-submit").textContent = `Save changes to #${entry.id}`;
+  $("income-cancel").classList.remove("hidden");
+  $("income-field-item").focus();
+}
+
+function stopIncomeEdit() {
+  $("income-edit-id").value = "";
+  $("income-field-item").value = "";
+  $("income-field-amount").value = "";
+  $("income-field-note").value = "";
+  $("income-submit").textContent = "Add income";
+  $("income-cancel").classList.add("hidden");
+}
+
+async function removeIncome(entry) {
+  if (!confirm(`Delete "${entry.item}" (${entry.amount_display}) from ${entry.date}?`)) return;
+  await api(`/api/expenses/${entry.id}`, { method: "DELETE" });
+  if ($("income-edit-id").value === String(entry.id)) stopIncomeEdit();
+  toast("Deleted");
+  await refreshIncome();
+}
+
+function wireIncomePage() {
+  $("personal-income-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const payload = {
+      date: $("income-field-date").value,
+      item: $("income-field-item").value.trim(),
+      amount: $("income-field-amount").value.trim(),
+      category: "Income",
+      note: $("income-field-note").value.trim(),
+    };
+    try {
+      if ($("income-edit-id").value) {
+        await api(`/api/expenses/${$("income-edit-id").value}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+        toast("Saved");
+        stopIncomeEdit();
+      } else {
+        const result = await api("/api/expenses", { method: "POST", body: JSON.stringify(payload) });
+        toast(`Added ${result.expense.amount_display} income`);
+        $("income-field-item").value = "";
+        $("income-field-amount").value = "";
+        $("income-field-note").value = "";
+      }
+      $("income-field-item").focus();
+      await refreshIncome();
+    } catch (error) {
+      toast(error.message, true);
+    }
+  });
+  $("income-cancel").addEventListener("click", stopIncomeEdit);
+  $("income-field-date").addEventListener("change", () =>
+    loadIncomeState().catch((error) => toast(error.message, true))
+  );
+  $("income-filter-range").addEventListener("change", () => {
+    const custom = $("income-filter-range").value === "custom";
+    $("income-custom-from-field").classList.toggle("hidden", !custom);
+    $("income-custom-to-field").classList.toggle("hidden", !custom);
+    loadIncomeHistory().catch((error) => toast(error.message, true));
+  });
+  [$("income-filter-from"), $("income-filter-to")].forEach((input) =>
+    input.addEventListener("change", () => loadIncomeHistory().catch((error) => toast(error.message, true)))
+  );
+  $("income-filter-search").addEventListener(
+    "input",
+    debounce(() => loadIncomeHistory().catch((error) => toast(error.message, true)), 250)
+  );
+}
+
 // ------------------------------------------------------------ statements
 
 const statementState = { lines: [], categories: [] };
@@ -1024,6 +1215,13 @@ if (page === "expenses") {
   wireExpensePage();
   refreshExpenses()
     .then(() => fieldItem.focus())
+    .catch((error) => toast(error.message, true));
+} else if (page === "income") {
+  $("income-field-date").value = new Date().toISOString().slice(0, 10);
+  $("retention-note").textContent = "Salary and other money in · food-order payments stay on Food orders";
+  wireIncomePage();
+  refreshIncome()
+    .then(() => $("income-field-item").focus())
     .catch((error) => toast(error.message, true));
 } else if (page === "orders") {
   $("retention-note").textContent = "Income minus costs, with reserves for rates, ABN, registration and income tax";

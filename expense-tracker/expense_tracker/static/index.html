@@ -17,6 +17,7 @@
   </div>
   <nav class="nav">
     <a class="nav-link" id="nav-expenses" href="/">Expenses</a>
+    <a class="nav-link" id="nav-income" href="/income">Income</a>
     <a class="nav-link" id="nav-orders" href="/orders">Food orders</a>
     <a class="nav-link" id="nav-statements" href="/statements">Statements</a>
   </nav>
@@ -64,7 +65,7 @@
       <div class="form-actions">
         <button type="submit" class="button primary" id="submit-button">Add expense</button>
         <button type="button" class="button ghost hidden" id="cancel-edit">Cancel</button>
-        <span class="hint">Use <a href="/orders">Food orders</a> for P&amp;L, or <a href="/statements">Statements</a> to file last month's bank PDFs.</span>
+        <span class="hint">Use <a href="/income">Income</a> for money received, <a href="/orders">Food orders</a> for P&amp;L, or <a href="/statements">Statements</a> to file last month's bank PDFs.</span>
       </div>
     </form>
 
@@ -126,6 +127,93 @@
 
     <div id="history-breakdown" class="bars compact"></div>
     <div id="history-entries"></div>
+  </section>
+</main>
+
+<main id="view-income" class="hidden">
+  <section class="panel entry" aria-labelledby="income-entry-heading">
+    <div class="panel-head">
+      <h2 id="income-entry-heading">Log income</h2>
+      <span class="pill" id="income-day-total">&mdash;</span>
+    </div>
+    <p class="muted">Salary, refunds and other money in. This is separate from food-order customer payments.</p>
+
+    <form id="personal-income-form" autocomplete="off">
+      <input type="hidden" id="income-edit-id" value="">
+      <div class="field-row">
+        <label class="field date-field">
+          <span>Date</span>
+          <input type="date" id="income-field-date" required>
+        </label>
+        <label class="field grow">
+          <span>Source</span>
+          <input type="text" id="income-field-item" placeholder="Where did this money come from?" required maxlength="200">
+        </label>
+      </div>
+      <div class="field-row">
+        <label class="field">
+          <span>Amount received</span>
+          <input type="text" inputmode="decimal" id="income-field-amount" placeholder="0.00" required>
+        </label>
+        <label class="field grow">
+          <span>Note <em>(optional)</em></span>
+          <input type="text" id="income-field-note" placeholder="Pay cycle, account, anything useful" maxlength="500">
+        </label>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="button primary" id="income-submit">Add income</button>
+        <button type="button" class="button ghost hidden" id="income-cancel">Cancel</button>
+      </div>
+    </form>
+
+    <div class="day-list">
+      <h3>Income for <span id="income-day-label">today</span></h3>
+      <div id="income-day-entries"></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="income-month-heading">
+    <div class="panel-head">
+      <h2 id="income-month-heading">This month</h2>
+      <span class="pill" id="income-month-total">&mdash;</span>
+    </div>
+    <p class="muted" id="income-month-label"></p>
+    <h3 class="section-title">Last 12 months</h3>
+    <p class="muted" id="income-window-total"></p>
+    <div id="income-trend" class="trend"></div>
+  </section>
+
+  <section class="panel wide" aria-labelledby="income-history-heading">
+    <div class="panel-head">
+      <h2 id="income-history-heading">History</h2>
+      <span class="pill" id="income-history-total">&mdash;</span>
+    </div>
+    <div class="filters">
+      <label class="field">
+        <span>Range</span>
+        <select id="income-filter-range">
+          <option value="month">This month</option>
+          <option value="last-month">Last month</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="365">Last 12 months</option>
+          <option value="custom">Custom&hellip;</option>
+        </select>
+      </label>
+      <label class="field hidden" id="income-custom-from-field">
+        <span>From</span>
+        <input type="date" id="income-filter-from">
+      </label>
+      <label class="field hidden" id="income-custom-to-field">
+        <span>To</span>
+        <input type="date" id="income-filter-to">
+      </label>
+      <label class="field grow">
+        <span>Search</span>
+        <input type="search" id="income-filter-search" placeholder="Source or note text">
+      </label>
+    </div>
+    <div id="income-history-entries"></div>
   </section>
 </main>
 
