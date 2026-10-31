@@ -1,0 +1,196 @@
+pattern,category
+woolworths,Veggies
+woolies,Veggies
+coles,Veggies
+aldi,Veggies
+iga ,Veggies
+harris farm,Veggies
+foodworks,Veggies
+greengrocer,Veggies
+fruit market,Veggies
+indian groc,Indian Groc
+indian spice,Indian Groc
+spice house,Indian Groc
+little india,Indian Groc
+punjabi,Indian Groc
+kerala,Indian Groc
+tamil,Indian Groc
+costco,Costco
+mcdonald,Dining
+maccas,Dining
+kfc,Dining
+hungry jack,Dining
+subway,Dining
+domino,Dining
+pizza hut,Dining
+nando,Dining
+grill'd,Dining
+uber eats,Dining
+ubereats,Dining
+doordash,Dining
+menulog,Dining
+deliveroo,Dining
+starbucks,Dining
+gloria jean,Dining
+boost juice,Dining
+coffee club,Dining
+restaurant,Dining
+ bp ,Gas
+shell,Gas
+ampol,Gas
+caltex,Gas
+united petroleum,Gas
+7-eleven,Gas
+7 eleven,Gas
+liberty,Gas
+metro petroleum,Gas
+fuel,Gas
+supercheap,Car expense
+repco,Car expense
+mycar,Car expense
+ultratune,Car expense
+kmart tyre,Car expense
+vicroads,Car expense
+rego,Car expense
+car wash,Car expense
+qantas,Flight
+jetstar,Flight
+virgin australia,Flight
+air asia,Flight
+singapore airline,Flight
+emirates,Flight
+etihad,Flight
+webjet,Flight
+flight centre,Flight
+uber,Travel
+ ola ,Travel
+didi,Travel
+taxi,Travel
+myki,Travel
+opal,Travel
+citylink,Travel
+eastlink,Travel
+toll,Travel
+uniqlo,Dress
+zara,Dress
+h&m,Dress
+cotton on,Dress
+kmart,Dress
+target,Dress
+big w,Dress
+myer,Dress
+david jones,Dress
+goodstart,Day care
+kindy,Day care
+kindergarten,Day care
+child care,Day care
+childcare,Day care
+daycare,Day care
+day care,Day care
+only about children,Day care
+guardian child,Day care
+council rates,Council
+city of ,Council
+shire of,Council
+agl ,EB
+origin energy,EB
+energyaustralia,EB
+energy australia,EB
+red energy,EB
+simply energy,EB
+alinta,EB
+powershop,EB
+electricity,EB
+yarra valley water,Water
+south east water,Water
+barwon water,Water
+sydney water,Water
+urban utilities,Water
+water bill,Water
+medibank,Health Insurance
+bupa,Health Insurance
+nib ,Health Insurance
+hcf,Health Insurance
+ ahm,Health Insurance
+teachers health,Health Insurance
+allianz,Home Insurance
+budget direct,Home Insurance
+youi,Home Insurance
+aami,Home Insurance
+qbe,Home Insurance
+telstra,Mobile
+optus,Mobile
+vodafone,Mobile
+amaysim,Mobile
+belong,Mobile
+boost mobile,Mobile
+aldi mobile,Mobile
+foxtel,TV
+fetch tv,TV
+kayo,TV
+netflix,Subscriptions
+spotify,Subscriptions
+disney,Subscriptions
+youtube,Subscriptions
+icloud,Subscriptions
+adobe,Subscriptions
+microsoft,Subscriptions
+amazon prime,Subscriptions
+chatgpt,Subscriptions
+openai,Subscriptions
+apple.com/bill,Subscriptions
+commsec,Shares
+selfwealth,Shares
+superhero,Shares
+stake,Shares
+pearler,Shares
+vanguard,Shares
+betashares,Shares
+perth mint,Gold
+abc bullion,Gold
+gold bullion,Gold
+ainslie,Gold
+wise,India Transfer
+transferwise,India Transfer
+western union,India Transfer
+icici,India Transfer
+hdfc,India Transfer
+remitly,India Transfer
+instarem,India Transfer
+moneygram,India Transfer
+house savings,HouseSavings
+offset,HouseSavings
+australia post,Locker
+po box,Locker
+locker,Locker
+booking.com,Tours
+airbnb,Tours
+expedia,Tours
+viator,Tours
+klook,Tours
+salary,Income
+wages,Income
+payroll,Income
+opening balance,SKIP
+closing balance,SKIP
+brought forward,SKIP
+balance brought,SKIP
+payment thank,SKIP
+thank you,SKIP
+credit card payment,SKIP
+visa payment,SKIP
+mastercard payment,SKIP
+transfer to savings,SKIP
+transfer from savings,SKIP
+transfer to offset,SKIP
+transfer from offset,SKIP
+transfer to xx,SKIP
+transfer from xx,SKIP
+tfr own,SKIP
+internet tfr,SKIP
+internal transfer,SKIP
+account transfer,SKIP
+between accounts,SKIP
+netbank transfer,SKIP
+commbank app transfer,SKIP
+funds transfer,SKIP
